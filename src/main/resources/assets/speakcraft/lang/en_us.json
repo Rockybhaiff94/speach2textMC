@@ -1,0 +1,37 @@
+{
+  "key.category.speakcraft.main": "SpeakCraft",
+  "key.category.speakcraft.controls": "SpeakCraft",
+  "key.category.speakcraft.category": "SpeakCraft",
+  "key.category.speakcraft": "SpeakCraft",
+  "category.speakcraft": "SpeakCraft",
+  "category.voice2text": "SpeakCraft",
+
+  "key.speakcraft.activation": "Chat-Only Toggle Key",
+  "key.speakcraft.toggle": "Gameplay Hold-to-Activate (500ms)",
+  "key.speakcraft.stop": "Stop & Draft Key",
+  "key.speakcraft.config": "Settings Key",
+
+  "key.voice2text.activation": "Chat-Only Toggle Key",
+  "key.voice2text.toggle": "Gameplay Hold-to-Activate (500ms)",
+  "key.voice2text.stop": "Stop & Draft Key",
+  "key.voice2text.config": "Settings Key",
+
+  "speakcraft.settings.title": "SpeakCraft Settings",
+  "speakcraft.settings.subtitle": "Real-Time Offline Speech-to-Text for Minecraft",
+  "speakcraft.settings.mode": "Recording Mode",
+  "speakcraft.settings.activation_mode": "Toggle Recording",
+  "speakcraft.settings.hold_to_talk_mode": "Hold-to-Talk (PTT)",
+  "speakcraft.settings.automatic_send": "Automatic Send",
+  "speakcraft.settings.microphone": "Microphone Input",
+  "speakcraft.settings.system_default": "System Default",
+  "speakcraft.settings.refresh_mics": "Refresh Microphones",
+  "speakcraft.settings.language": "Language & Speech Model",
+  "speakcraft.settings.download_model": "Download Model",
+  "speakcraft.settings.capitalization": "Capitalization",
+  "speakcraft.settings.voice_punctuation": "Voice Punctuation",
+  "speakcraft.status.listening": "Listening...",
+  "speakcraft.status.finalizing": "Finalizing...",
+  "speakcraft.status.ready": "Ready",
+  "speakcraft.status.model_missing": "Model Missing",
+  "speakcraft.status.mic_error": "Microphone Error"
+}

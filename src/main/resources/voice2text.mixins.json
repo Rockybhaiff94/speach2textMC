@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.voice2text.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ChatScreenAccessor",
+    "ChatScreenMixin",
+    "HudMixin",
+    "KeyboardHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

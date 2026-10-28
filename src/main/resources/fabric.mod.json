@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "voice2text",
+  "version": "${version}",
+  "name": "SpeakCraft",
+  "description": "SpeakCraft: Real-time client-side voice-to-text transcription mod for Minecraft chat with offline-first speech recognition.",
+  "authors": [
+    "Voice2Text Development Team"
+  ],
+  "contact": {
+    "homepage": "https://github.com/voice2text/voice2text",
+    "sources": "https://github.com/voice2text/voice2text"
+  },
+  "license": "Apache-2.0",
+  "icon": "assets/voice2text/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.voice2text.VoiceToTextMod"
+    ]
+  },
+  "mixins": [
+    "voice2text.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": ">=26.2 <=26.3",
+    "java": ">=21",
+    "fabric-lifecycle-events-v1": "*",
+    "fabric-key-mapping-api-v1": "*"
+  }
+}

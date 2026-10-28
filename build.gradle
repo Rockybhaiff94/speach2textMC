@@ -1,0 +1,75 @@
+plugins {
+    id 'fabric-loom' version '1.19.3'
+    id 'maven-publish'
+}
+
+version = "${project.mod_version}+mc${project.minecraft_version}"
+group = project.maven_group
+base.archivesName = project.archives_base_name
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+}
+
+configurations {
+    bundle
+    implementation.extendsFrom(bundle)
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    // Modular Fabric API (avoids pulling broken/unneeded modules like fabric-item-api-v1 in 26.3)
+    implementation fabricApi.module("fabric-lifecycle-events-v1", project.fabric_version)
+    implementation fabricApi.module("fabric-key-mapping-api-v1", project.fabric_version)
+
+    // Speech Recognition & Audio bundled directly into the distribution JAR
+    bundle 'com.alphacephei:vosk:0.3.45'
+    bundle 'net.java.dev.jna:jna:5.14.0'
+    implementation 'com.google.code.gson:gson:2.11.0'
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+jar {
+    from {
+        configurations.bundle.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/INDEX.LIST'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+    it.options.encoding = 'UTF-8'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    withSourcesJar()
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'minecraft_version', project.minecraft_version
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version,
+               'minecraft_version': project.minecraft_version
+    }
+}
