@@ -251,8 +251,18 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
     }
 
     private static String parseTextFromJson(String json, String field) {
-        if (json == null || json.trim().isEmpty()) {
+        if (json == null || json.isEmpty()) {
             return "";
+        }
+        // Fast path for Vosk standard JSON: "field" : "value"
+        String marker = "\"" + field + "\" : \"";
+        int start = json.indexOf(marker);
+        if (start != -1) {
+            start += marker.length();
+            int end = json.indexOf("\"", start);
+            if (end != -1) {
+                return json.substring(start, end).trim();
+            }
         }
         try {
             JsonObject obj = JsonParser.parseString(json).getAsJsonObject();

@@ -21,6 +21,13 @@ public class AudioDeviceManager {
     public static final String SYSTEM_DEFAULT = "System Default";
 
     private static Consumer<String> fallbackNotificationListener;
+    private static volatile List<String> cachedDevices = null;
+    private static volatile long lastCacheTime = 0L;
+    private static final long CACHE_TTL_MS = 5000L;
+
+    public static synchronized void invalidateCache() {
+        cachedDevices = null;
+    }
 
     public static void setFallbackNotificationListener(Consumer<String> listener) {
         fallbackNotificationListener = listener;
@@ -28,11 +35,18 @@ public class AudioDeviceManager {
 
     /**
      * Enumerates real physical and virtual recording devices supported by the operating system.
+     * Results are cached for 5 seconds to prevent repeated expensive mixer discovery calls.
      *
      * @param format required AudioFormat (16kHz, 16-bit, mono)
      * @return ordered list of device names with System Default first
      */
     public static List<String> getAvailableInputDevices(AudioFormat format) {
+        long now = System.currentTimeMillis();
+        List<String> cached = cachedDevices;
+        if (cached != null && (now - lastCacheTime < CACHE_TTL_MS)) {
+            return cached;
+        }
+
         Set<String> devices = new LinkedHashSet<>();
         devices.add(SYSTEM_DEFAULT);
 
@@ -58,7 +72,10 @@ public class AudioDeviceManager {
         } catch (Throwable ignored) {
         }
 
-        return Collections.unmodifiableList(new ArrayList<>(devices));
+        List<String> result = Collections.unmodifiableList(new ArrayList<>(devices));
+        cachedDevices = result;
+        lastCacheTime = now;
+        return result;
     }
 
     /**

@@ -150,6 +150,9 @@ public class VoiceToTextMod implements ClientModInitializer {
             }
         }, "SpeakCraft-ShutdownHook"));
 
+        // Preload speech recognition model in background if already installed
+        this.controller.preloadModelAsync();
+
         System.out.println("[SpeakCraft] SpeakCraft Real-Time Voice-to-Text mod initialized successfully.");
     }
 

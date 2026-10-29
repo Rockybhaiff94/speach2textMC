@@ -187,6 +187,33 @@ d:/mybuilds/voice2text/
 - Staging directory unzipping with canonical path validation prevents Zip Slip vulnerabilities.
 - Manual download fallback instructions provided on failure.
 
+### 3.5 Non-Blocking Asynchronous Audio & Session Lifecycle (V-Key Freeze Fix)
+- **Zero Client-Thread Blocking**: All microphone acquisition, Java Sound `TargetDataLine` opening, Vosk model initialization, and recognizer start/reset operations execute asynchronously on a dedicated daemon background executor (`recordingExecutor`).
+- **Non-Blocking Key Release & Finalization**: The Minecraft client thread never blocks in `CountDownLatch.await(...)` or waits synchronously on audio flush. Finalization wait (up to 1000ms timeout) and text formatting run asynchronously on `recordingExecutor`, with the finalized message dispatched safely back to the client thread via `clientThreadExecutor.execute(...)`.
+- **Pre-warmed Model & Lazy Capture Management**: The speech model is preloaded in the background on startup or model change; capture line startup avoids full system device re-enumeration where feasible.
+- **Lock Isolation**: Synchronization between audio streaming, recognizer state, and Minecraft tick loop uses isolated, non-contending locks or atomic primitives.
+
+### 3.6 Speech Recognition & Context-Aware Automatic Text Correction
+- **Natural Mixed Script Support**: Preserves both Devanagari Hindi and English words where the speaker naturally mixes them (e.g. `मुझे food चाहिए`, `ये एक test build है`). Forced transliteration to Roman script is restricted to explicit Romanized Hinglish mode and never destroys English loanwords, commands, or numbers.
+- **Context-Aware Automatic Correction Layer (`TranscriptionCorrectionService`)**:
+  - Operates as a separate component between speech recognition and final text commitment.
+  - Automatically corrects obvious transcription mistakes in finalized recognized text before commitment to Minecraft chat (e.g., `phood` -> `food` in Devanagari/Hindi context, `bil` -> `build` in test/gaming context).
+  - Uses conservative context matching: corrects only when surrounding tokens (n-grams/bi-grams) strongly support the correction; leaves uncertain words untouched.
+  - Never modifies existing drafts, manually typed text, or commands (`/tp`, `/give`, etc.).
+  - Preserves legitimate repetitions, spacing, and punctuation.
+
+### 3.7 Persistent Personalized Learning Store (`PersonalizedLearningStore`)
+- **Persistent Local Store**: Saved to `.minecraft/voice2text/learned_corrections.json`.
+- **Learned Correction Mappings**: Stores mappings from recognized mistake to confirmed intended word/phrase, with optional n-gram context and occurrence count.
+- **Bounded Storage & LRU Eviction**: Caps storage at 1,000 entries; uses normalized keys while preserving the target script, case, and accents.
+- **Explicit Confirmation Only**: Learns only from confirmed user actions (such as edited chat drafts or settings management), never unconfirmed raw ASR output.
+- **Resilient & Reset-Capable**: Gracefully recovers from malformed/corrupted files by backing them up to `.bak` and initializing a fresh store. Supports resetting learned corrections independently of main configuration.
+
+### 3.8 Runtime Resource & Performance Optimization
+- **Bounded Audio Queue & Backpressure**: Streams audio chunks through a bounded queue to prevent memory growth under slow recognition.
+- **Allocation & Regex Hygiene**: All regex patterns and JSON keys are precompiled and statically cached; hot paths avoid byte array copies and repeated JSON parsing.
+- **Clean Resource Shutdown**: Native Vosk objects (`Model`, `Recognizer`) and background executors are gracefully terminated via shutdown hooks and client disconnect listeners.
+
 ---
 
 ## 4. Verification & Acceptance Criteria

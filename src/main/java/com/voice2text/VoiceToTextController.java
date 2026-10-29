@@ -17,11 +17,15 @@ import com.voice2text.speech.RecognitionListener;
 import com.voice2text.speech.RecognitionResult;
 import com.voice2text.speech.SpeechRecognitionEngine;
 import com.voice2text.speech.vosk.VoskSpeechEngine;
+import com.voice2text.transcription.PersonalizedLearningStore;
 import com.voice2text.transcription.TranscriptionBuffer;
+import com.voice2text.transcription.TranscriptionCorrectionService;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -29,6 +33,13 @@ import java.util.function.Consumer;
 /**
  * Central orchestrator connecting input events, audio capture, speech recognition,
  * transcription buffering, recording session lifecycle, and Minecraft chat screen integration.
+ *
+ * Performance enhancements:
+ * - Asynchronous, non-blocking recording startup and finalization on dedicated background worker.
+ * - Zero Minecraft client thread blocking on microphone acquisition, Java Sound line opening,
+ *   or Kaldi/Vosk speech model loading.
+ * - Integration of ContextAwareCorrectionService and PersonalizedLearningStore for Hindi, English,
+ *   and Hinglish speech recognition improvement.
  */
 public class VoiceToTextController implements RecognitionListener {
 
@@ -39,6 +50,11 @@ public class VoiceToTextController implements RecognitionListener {
     private final TranscriptionBuffer transcriptionBuffer;
     private final MinecraftChatBridge chatBridge;
     private final Executor clientThreadExecutor;
+
+    private final Executor asyncExecutor;
+    private final boolean ownsAsyncExecutor;
+    private final PersonalizedLearningStore learningStore;
+    private final TranscriptionCorrectionService correctionService;
 
     private SpeechRecognitionEngine speechEngine;
     private AudioCaptureService audioCaptureService;
@@ -59,13 +75,40 @@ public class VoiceToTextController implements RecognitionListener {
                                  MinecraftChatBridge chatBridge,
                                  Executor clientThreadExecutor,
                                  SpeechRecognitionEngine engine,
-                                 AudioSource audioSource) {
+                                 AudioSource audioSource,
+                                 PersonalizedLearningStore learningStore,
+                                 TranscriptionCorrectionService correctionService,
+                                 Executor asyncExecutor) {
         this.configManager = configManager;
         this.modelManager = modelManager;
         this.chatBridge = chatBridge;
         this.clientThreadExecutor = clientThreadExecutor != null ? clientThreadExecutor : Runnable::run;
         this.speechEngine = engine != null ? engine : new VoskSpeechEngine();
         this.audioSource = audioSource != null ? audioSource : new MicrophoneAudioSource();
+
+        if (asyncExecutor != null) {
+            this.asyncExecutor = asyncExecutor;
+            this.ownsAsyncExecutor = false;
+        } else {
+            this.asyncExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "SpeakCraft-AsyncWorker");
+                t.setDaemon(true);
+                return t;
+            });
+            this.ownsAsyncExecutor = true;
+        }
+
+        if (learningStore != null) {
+            this.learningStore = learningStore;
+        } else {
+            File baseDir = modelManager != null && modelManager.getModelsBaseDir() != null
+                    ? (modelManager.getModelsBaseDir().getParentFile() != null ? modelManager.getModelsBaseDir().getParentFile() : modelManager.getModelsBaseDir())
+                    : new File(".");
+            File storeFile = new File(baseDir, "learned_corrections.json");
+            this.learningStore = new PersonalizedLearningStore(storeFile);
+        }
+
+        this.correctionService = correctionService != null ? correctionService : new TranscriptionCorrectionService(this.learningStore);
 
         VoiceToTextConfig config = configManager.getConfig();
         this.keybindManager = new KeybindManager(config);
@@ -90,8 +133,38 @@ public class VoiceToTextController implements RecognitionListener {
     public VoiceToTextController(ConfigManager configManager,
                                  ModelManager modelManager,
                                  MinecraftChatBridge chatBridge,
+                                 Executor clientThreadExecutor,
+                                 SpeechRecognitionEngine engine,
+                                 AudioSource audioSource) {
+        this(configManager, modelManager, chatBridge, clientThreadExecutor, engine, audioSource, null, null, Runnable::run);
+    }
+
+    public VoiceToTextController(ConfigManager configManager,
+                                 ModelManager modelManager,
+                                 MinecraftChatBridge chatBridge,
                                  Executor clientThreadExecutor) {
-        this(configManager, modelManager, chatBridge, clientThreadExecutor, null, null);
+        this(configManager, modelManager, chatBridge, clientThreadExecutor, null, null, null, null, null);
+    }
+
+    /**
+     * Asynchronously preloads the active speech model into memory in the background
+     * so that the first activation with V does not experience any disk or model loading latency.
+     */
+    public void preloadModelAsync() {
+        VoiceToTextConfig config = configManager.getConfig();
+        String modelId = config.getActiveModelId();
+        if (modelManager.isModelInstalled(modelId) && loadedModelId == null) {
+            asyncExecutor.execute(() -> {
+                File modelDir = modelManager.getModelDir(modelId);
+                try {
+                    speechEngine.initialize(modelDir.getAbsolutePath());
+                    this.loadedModelId = modelId;
+                    statusMessage = "Ready";
+                    notifyStateChange();
+                } catch (Throwable ignored) {
+                }
+            });
+        }
     }
 
     public void handleKeyAction(KeyAction action) {
@@ -117,9 +190,9 @@ public class VoiceToTextController implements RecognitionListener {
     }
 
     /**
-     * Starts a new dictation session.
-     * Captures an immutable snapshot of configuration options (such as Automatic Send),
-     * allocates a unique session identifier, and initializes the audio capture pipeline.
+     * Starts a new dictation session asynchronously without blocking the Minecraft main thread.
+     * Captures an immutable snapshot of configuration options, allocates a unique session identifier,
+     * and offloads microphone and model initialization to the background executor.
      */
     public synchronized void startDictation() {
         if (active.get() || (currentSession != null && !currentSession.isFinished())) {
@@ -140,24 +213,6 @@ public class VoiceToTextController implements RecognitionListener {
             return;
         }
 
-        // Initialize or switch engine model if needed
-        File modelDir = modelManager.getModelDir(modelId);
-        if (!modelId.equals(loadedModelId) || speechEngine.getState() == EngineState.UNINITIALIZED || speechEngine.getState() == EngineState.CLOSED) {
-            try {
-                statusMessage = "Loading Model...";
-                notifyStateChange();
-                speechEngine.close();
-                speechEngine.initialize(modelDir.getAbsolutePath());
-                this.loadedModelId = modelId;
-            } catch (IOException e) {
-                this.loadedModelId = null;
-                chatBridge.displayClientMessage("§c[SpeakCraft] Failed to load speech model: " + e.getMessage(), true);
-                statusMessage = "Model Load Failed";
-                notifyStateChange();
-                return;
-            }
-        }
-
         // Snapshot configuration at recording start
         boolean autoSendSnapshot = config.isAutomaticSend();
         String currentDraft = chatBridge.isChatOpen() ? chatBridge.getChatInput() : "";
@@ -170,34 +225,86 @@ public class VoiceToTextController implements RecognitionListener {
         inputStateMachine.setAutomaticSendEnabled(autoSendSnapshot);
         transcriptionBuffer.startSession(currentDraft, currentDraft.length());
 
-        try {
-            if (audioSource instanceof MicrophoneAudioSource) {
-                ((MicrophoneAudioSource) audioSource).setDeviceName(config.getSelectedMicrophone());
-            }
-            speechEngine.start();
-            audioCaptureService.start();
-            active.set(true);
-            session.transitionToRecording();
-            statusMessage = "Listening...";
-            notifyStateChange();
+        statusMessage = "Starting...";
+        notifyStateChange();
 
-            // Handle race condition where stop was requested during startup
-            if (session.isStopRequested()) {
-                KeyAction pending = session.getPendingStopAction();
-                if (pending == KeyAction.STOP_AND_SEND) {
-                    stopAndSend();
-                } else if (pending == KeyAction.STOP_AND_KEEP_DRAFT) {
-                    stopAndKeepDraft();
-                } else if (pending == KeyAction.CANCEL_DICTATION) {
-                    cancelDictation();
+        // Offload blocking hardware and speech model work to background executor
+        asyncExecutor.execute(() -> {
+            try {
+                // Initialize or switch engine model if needed
+                File modelDir = modelManager.getModelDir(modelId);
+                if (!modelId.equals(loadedModelId) || speechEngine.getState() == EngineState.UNINITIALIZED || speechEngine.getState() == EngineState.CLOSED) {
+                    try {
+                        speechEngine.close();
+                        speechEngine.initialize(modelDir.getAbsolutePath());
+                        this.loadedModelId = modelId;
+                    } catch (IOException e) {
+                        this.loadedModelId = null;
+                        chatBridge.displayClientMessage("§c[SpeakCraft] Failed to load speech model: " + e.getMessage(), true);
+                        statusMessage = "Model Load Failed";
+                        session.transitionToCancelled();
+                        notifyStateChange();
+                        return;
+                    }
                 }
+
+                // Check if user cancelled or requested stop while startup was pending
+                if (session.isFinished() || session.isStopRequested()) {
+                    handlePendingStopOrCancel(session);
+                    return;
+                }
+
+                if (audioSource instanceof MicrophoneAudioSource) {
+                    ((MicrophoneAudioSource) audioSource).setDeviceName(config.getSelectedMicrophone());
+                }
+
+                speechEngine.start();
+                audioCaptureService.start();
+                active.set(true);
+                session.transitionToRecording();
+                statusMessage = "Listening...";
+                notifyStateChange();
+
+                // Handle race condition where key was released while audio line was opening
+                if (session.isStopRequested()) {
+                    handlePendingStopOrCancel(session);
+                }
+            } catch (Throwable e) {
+                chatBridge.displayClientMessage("§c[SpeakCraft] Failed to open microphone: " + e.getMessage(), true);
+                statusMessage = "Mic Error";
+                active.set(false);
+                session.transitionToCancelled();
+                notifyStateChange();
             }
-        } catch (IOException e) {
-            chatBridge.displayClientMessage("§c[SpeakCraft] Failed to open microphone: " + e.getMessage(), true);
-            statusMessage = "Mic Error";
-            active.set(false);
+        });
+    }
+
+    private void handlePendingStopOrCancel(RecordingSession session) {
+        if (session == null || session.isFinished()) {
+            return;
+        }
+
+        KeyAction pending = session.getPendingStopAction();
+        active.set(false);
+
+        if (audioCaptureService != null) {
+            audioCaptureService.stop();
+        }
+        if (speechEngine != null) {
+            speechEngine.stop();
+        }
+
+        if (pending == KeyAction.CANCEL_DICTATION) {
             session.transitionToCancelled();
+            String savedDraft = transcriptionBuffer.getFullCommittedText();
+            currentAudioLevel = 0.0f;
+            speechDetected = false;
+            statusMessage = "Cancelled";
             notifyStateChange();
+            clientThreadExecutor.execute(() -> chatBridge.updateChatInput(savedDraft));
+        } else {
+            boolean autoSend = (pending == KeyAction.STOP_AND_SEND);
+            finalizeAndDispatch(session, autoSend);
         }
     }
 
@@ -220,6 +327,7 @@ public class VoiceToTextController implements RecognitionListener {
     /**
      * Stops recording and automatically submits the finalized transcript to Minecraft chat.
      * Guaranteed to submit exactly once and only for non-empty speech.
+     * Executes non-blocking: final result wait and submission occur on the background executor.
      */
     public synchronized void stopAndSend() {
         RecordingSession session = this.currentSession;
@@ -238,28 +346,34 @@ public class VoiceToTextController implements RecognitionListener {
 
         statusMessage = "Finalizing...";
         notifyStateChange();
-
-        // Safely stop audio capture service before engine flush
-        if (audioCaptureService != null) {
-            audioCaptureService.stop();
-        }
         active.set(false);
 
-        if (speechEngine != null) {
-            speechEngine.stop();
-        }
+        asyncExecutor.execute(() -> {
+            try {
+                if (audioCaptureService != null) {
+                    audioCaptureService.stop();
+                }
 
-        // Await final result if speech was active and callback not yet received
-        if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
-            session.awaitFinalResult(1000);
-        }
+                if (speechEngine != null) {
+                    speechEngine.stop();
+                }
 
-        finalizeAndDispatch(session, true);
+                // Await final result asynchronously if speech was active and callback not yet received
+                if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
+                    session.awaitFinalResult(1000);
+                }
+
+                finalizeAndDispatch(session, true);
+            } catch (Throwable t) {
+                logDiagnostic("StopAndSend-Error", t.getMessage());
+            }
+        });
     }
 
     /**
      * Stops recording and inserts the finalized transcript into the Minecraft chat input
      * as an editable draft without automatically sending it.
+     * Executes non-blocking: final result wait occurs on the background executor.
      */
     public synchronized void stopAndKeepDraft() {
         RecordingSession session = this.currentSession;
@@ -278,21 +392,27 @@ public class VoiceToTextController implements RecognitionListener {
 
         statusMessage = "Finalizing...";
         notifyStateChange();
-
-        if (audioCaptureService != null) {
-            audioCaptureService.stop();
-        }
         active.set(false);
 
-        if (speechEngine != null) {
-            speechEngine.stop();
-        }
+        asyncExecutor.execute(() -> {
+            try {
+                if (audioCaptureService != null) {
+                    audioCaptureService.stop();
+                }
 
-        if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
-            session.awaitFinalResult(1000);
-        }
+                if (speechEngine != null) {
+                    speechEngine.stop();
+                }
 
-        finalizeAndDispatch(session, false);
+                if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
+                    session.awaitFinalResult(1000);
+                }
+
+                finalizeAndDispatch(session, false);
+            } catch (Throwable t) {
+                logDiagnostic("StopAndKeepDraft-Error", t.getMessage());
+            }
+        });
     }
 
     private synchronized void finalizeAndDispatch(RecordingSession session, boolean autoSend) {
@@ -301,15 +421,21 @@ public class VoiceToTextController implements RecognitionListener {
         }
 
         String finalDraft = transcriptionBuffer.finalizeSession();
+        // Context-aware automatic speech correction on finalized text
+        if (correctionService != null && finalDraft != null && !finalDraft.trim().isEmpty()) {
+            finalDraft = correctionService.correctFinalizedText(finalDraft);
+        }
+
         session.setFinalizedText(finalDraft);
         currentAudioLevel = 0.0f;
         speechDetected = false;
 
         logDiagnostic("Pre-Insertion", "Final draft before insertion: '" + finalDraft + "', autoSend: " + autoSend);
 
+        final String dispatchedText = finalDraft;
         if (autoSend) {
-            if (finalDraft != null && !finalDraft.trim().isEmpty()) {
-                String toSend = finalDraft.trim();
+            if (dispatchedText != null && !dispatchedText.trim().isEmpty()) {
+                String toSend = dispatchedText.trim();
                 if (session.markSubmitted()) {
                     statusMessage = "Sent";
                     notifyStateChange();
@@ -331,10 +457,10 @@ public class VoiceToTextController implements RecognitionListener {
             statusMessage = "Draft Kept";
             notifyStateChange();
             clientThreadExecutor.execute(() -> {
-                if (finalDraft != null && !finalDraft.trim().isEmpty()) {
-                    chatBridge.updateChatInput(finalDraft);
+                if (dispatchedText != null && !dispatchedText.trim().isEmpty()) {
+                    chatBridge.updateChatInput(dispatchedText);
                     if (!chatBridge.isChatOpen()) {
-                        chatBridge.openChat(finalDraft);
+                        chatBridge.openChat(dispatchedText);
                     }
                 }
             });
@@ -354,14 +480,16 @@ public class VoiceToTextController implements RecognitionListener {
         }
 
         session.transitionToCancelled();
-
-        if (audioCaptureService != null) {
-            audioCaptureService.stop();
-        }
-        if (speechEngine != null) {
-            speechEngine.stop();
-        }
         active.set(false);
+
+        asyncExecutor.execute(() -> {
+            if (audioCaptureService != null) {
+                audioCaptureService.stop();
+            }
+            if (speechEngine != null) {
+                speechEngine.stop();
+            }
+        });
 
         String savedDraft = transcriptionBuffer.getFullCommittedText();
         currentAudioLevel = 0.0f;
@@ -387,13 +515,25 @@ public class VoiceToTextController implements RecognitionListener {
         }
     }
 
-    public boolean isHinglishActive() {
+    /**
+     * Checks if Romanized Hinglish transliteration is explicitly active.
+     * Returns true ONLY when speech language is configured as "hi-en" or "hinglish".
+     * Standard Hindi ("hi", "hi-IN") preserves natural Devanagari Hindi and English words.
+     */
+    public boolean isRomanizedHinglishActive() {
         VoiceToTextConfig cfg = configManager != null ? configManager.getConfig() : null;
         if (cfg == null) return false;
         String lang = cfg.getSpeechLanguage();
         String modelId = cfg.getActiveModelId();
-        return (lang != null && (lang.equalsIgnoreCase("hi-en") || lang.equalsIgnoreCase("hinglish") || lang.equalsIgnoreCase("hi-in") || lang.equalsIgnoreCase("hi")))
-                || (modelId != null && (modelId.toLowerCase().contains("hinglish") || modelId.toLowerCase().contains("-hi-")));
+        return (lang != null && (lang.equalsIgnoreCase("hi-en") || lang.equalsIgnoreCase("hinglish")))
+                || (modelId != null && modelId.toLowerCase().contains("hinglish"));
+    }
+
+    /**
+     * Backward-compatible alias for Hinglish recognition checking.
+     */
+    public boolean isHinglishActive() {
+        return isRomanizedHinglishActive();
     }
 
     @Override
@@ -404,7 +544,7 @@ public class VoiceToTextController implements RecognitionListener {
         }
 
         String rawText = result.getText();
-        if (isHinglishActive() || com.voice2text.transcription.HinglishTransliterationService.containsDevanagari(rawText)) {
+        if (isRomanizedHinglishActive()) {
             String original = rawText;
             rawText = com.voice2text.transcription.HinglishTransliterationService.transliterate(rawText);
             logDiagnostic("ASR-Partial", "Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
@@ -430,7 +570,12 @@ public class VoiceToTextController implements RecognitionListener {
         }
 
         String rawText = result.getText();
-        if (isHinglishActive() || com.voice2text.transcription.HinglishTransliterationService.containsDevanagari(rawText)) {
+        // Context-aware speech recognition correction
+        if (correctionService != null) {
+            rawText = correctionService.correctFinalizedText(rawText);
+        }
+
+        if (isRomanizedHinglishActive()) {
             String original = rawText;
             rawText = com.voice2text.transcription.HinglishTransliterationService.transliterate(rawText);
             logDiagnostic("ASR-Final", "Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
@@ -498,7 +643,7 @@ public class VoiceToTextController implements RecognitionListener {
     }
 
     public boolean isDictationActive() {
-        return active.get();
+        return active.get() || (currentSession != null && currentSession.getState() == RecordingSession.State.STARTING);
     }
 
     public boolean isHoldToTalkActive() {
@@ -549,6 +694,20 @@ public class VoiceToTextController implements RecognitionListener {
         return modelManager;
     }
 
+    public PersonalizedLearningStore getLearningStore() {
+        return learningStore;
+    }
+
+    public TranscriptionCorrectionService getCorrectionService() {
+        return correctionService;
+    }
+
+    public void learnCorrection(String mistake, String correction, String context) {
+        if (learningStore != null) {
+            learningStore.recordCorrection(mistake, correction, context);
+        }
+    }
+
     public void setStateChangeListener(Consumer<VoiceToTextController> listener) {
         this.stateChangeListener = listener;
     }
@@ -588,8 +747,14 @@ public class VoiceToTextController implements RecognitionListener {
         if (audioCaptureService != null) {
             audioCaptureService.stop();
         }
+        if (audioSource instanceof MicrophoneAudioSource) {
+            ((MicrophoneAudioSource) audioSource).release();
+        }
         if (speechEngine != null) {
             speechEngine.close();
+        }
+        if (ownsAsyncExecutor && asyncExecutor instanceof ExecutorService) {
+            ((ExecutorService) asyncExecutor).shutdownNow();
         }
         loadedModelId = null;
     }

@@ -315,9 +315,9 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal(isInstalled ? "Model installed. Click to ensure active." : "Download offline neural speech model from verified official repositories.")))
          .bounds(centerX + 4, startY + (rowSpacing * 5), btnW, btnH).build());
 
-        // --- ROW 7: Reset Keybinds ---
+        // --- ROW 7: Reset Keybinds (Left) & Reset Learned Corrections (Right) ---
         addRenderableWidget(Button.builder(
-                Component.literal("§7Reset Keybinds (T, V, P, O)"),
+                Component.literal("§7Reset Keybinds"),
                 button -> {
                     VoiceToTextMod mod = VoiceToTextMod.getInstance();
                     if (mod != null && mod.getKeybindManager() != null) {
@@ -328,7 +328,23 @@ public class VoiceConfigScreen extends Screen {
                     rebuildWidgets();
                 }
         ).tooltip(Tooltip.create(Component.literal("Restores default key mappings: T for activation, V for Hold-to-Talk, P for stop & draft, O for settings.")))
-         .bounds(centerX - (btnW / 2), startY + (rowSpacing * 6), btnW, btnH).build());
+         .bounds(centerX - btnW - 4, startY + (rowSpacing * 6), btnW, btnH).build());
+
+        VoiceToTextMod currentMod = VoiceToTextMod.getInstance();
+        int learnedCount = (currentMod != null && currentMod.getController() != null && currentMod.getController().getLearningStore() != null)
+                ? currentMod.getController().getLearningStore().size() : 0;
+        String learnedText = "Learned Words: §b" + learnedCount + (learnedCount > 0 ? " §c(Reset)" : "");
+        addRenderableWidget(Button.builder(
+                Component.literal(learnedText),
+                button -> {
+                    if (currentMod != null && currentMod.getController() != null && currentMod.getController().getLearningStore() != null) {
+                        currentMod.getController().getLearningStore().reset();
+                        downloadStatus = "§aLearned corrections have been reset.";
+                    }
+                    rebuildWidgets();
+                }
+        ).tooltip(Tooltip.create(Component.literal("Number of user-confirmed speech corrections learned. Click to reset learned corrections without affecting settings.")))
+         .bounds(centerX + 4, startY + (rowSpacing * 6), btnW, btnH).build());
 
         // --- BOTTOM: Done Button ---
         addRenderableWidget(Button.builder(
