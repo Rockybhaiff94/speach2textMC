@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Mixin injecting into Minecraft's in-game HUD to render SpeakCraft's
+ * Mixin injecting into Minecraft's in-game HUD to render Voice2Text's
  * ListeningOverlay when voice recognition is active during gameplay outside chat.
  */
 @Mixin(Hud.class)

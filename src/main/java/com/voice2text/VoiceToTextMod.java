@@ -20,7 +20,7 @@ import java.io.File;
 import java.nio.file.Files;
 
 /**
- * Main Fabric client mod entrypoint for SpeakCraft (Voice-to-Text).
+ * Main Fabric client mod entrypoint for Voice2Text (Voice-to-Text).
  */
 public class VoiceToTextMod implements ClientModInitializer {
 
@@ -28,18 +28,20 @@ public class VoiceToTextMod implements ClientModInitializer {
     private static VoiceToTextMod instance;
 
     /**
-     * Dedicated SpeakCraft controls category registered with Fabric/Minecraft.
-     * Appears in Options -> Controls -> Key Binds -> SpeakCraft.
+     * Dedicated Voice2Text controls category registered with Fabric/Minecraft.
+     * Appears in Options -> Controls -> Key Binds -> Voice2Text.
      */
+    public static final KeyMapping.Category VOICE2TEXT_CATEGORY;
     public static final KeyMapping.Category SPEAKCRAFT_CATEGORY;
     static {
         KeyMapping.Category category;
-        Identifier catId = Identifier.fromNamespaceAndPath("speakcraft", "main");
+        Identifier catId = Identifier.fromNamespaceAndPath("voice2text", "main");
         try {
             category = KeyMapping.Category.register(catId);
         } catch (IllegalArgumentException e) {
             category = new KeyMapping.Category(catId);
         }
+        VOICE2TEXT_CATEGORY = category;
         SPEAKCRAFT_CATEGORY = category;
     }
 
@@ -94,29 +96,29 @@ public class VoiceToTextMod implements ClientModInitializer {
 
         VoiceToTextConfig config = configManager.getConfig();
 
-        // Register All 4 SpeakCraft Key Mappings under the SpeakCraft Category
+        // Register All 4 Voice2Text Key Mappings under the Voice2Text Category
         this.activationKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.speakcraft.activation",
+                "key.voice2text.activation",
                 config.getActivationKeyCode(),
-                SPEAKCRAFT_CATEGORY
+                VOICE2TEXT_CATEGORY
         ));
 
         this.toggleKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.speakcraft.toggle",
+                "key.voice2text.toggle",
                 config.getDedicatedToggleKeyCode(),
-                SPEAKCRAFT_CATEGORY
+                VOICE2TEXT_CATEGORY
         ));
 
         this.stopKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.speakcraft.stop",
+                "key.voice2text.stop",
                 config.getStopKeyCode(),
-                SPEAKCRAFT_CATEGORY
+                VOICE2TEXT_CATEGORY
         ));
 
         this.configKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.speakcraft.config",
+                "key.voice2text.config",
                 config.getConfigKeyCode(),
-                SPEAKCRAFT_CATEGORY
+                VOICE2TEXT_CATEGORY
         ));
 
         this.controller.getKeybindManager().setKeyMappings(
@@ -148,12 +150,12 @@ public class VoiceToTextMod implements ClientModInitializer {
             if (controller != null) {
                 controller.shutdown();
             }
-        }, "SpeakCraft-ShutdownHook"));
+        }, "Voice2Text-ShutdownHook"));
 
         // Preload speech recognition model in background if already installed
         this.controller.preloadModelAsync();
 
-        System.out.println("[SpeakCraft] SpeakCraft Real-Time Voice-to-Text mod initialized successfully.");
+        System.out.println("[Voice2Text] Voice2Text Real-Time Voice-to-Text mod initialized successfully.");
     }
 
     private void migrateLegacyFiles(File newConfigFile, File newModelsDir) {

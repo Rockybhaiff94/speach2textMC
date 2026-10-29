@@ -3,7 +3,7 @@ package com.voice2text.input;
 import java.util.function.Consumer;
 
 /**
- * State machine managing SpeakCraft recording sessions:
+ * State machine managing Voice2Text recording sessions:
  * - Mode A: V Hold-to-Activate during gameplay (500ms threshold, continuous hold while speaking, release stops).
  * - Mode B: Chat-Only Toggle Recording (only in Minecraft chat, 1st press starts, 2nd press stops).
  * - Stop & Draft Key ('P'), Escape safe cancellation, and focus-interruption recovery.

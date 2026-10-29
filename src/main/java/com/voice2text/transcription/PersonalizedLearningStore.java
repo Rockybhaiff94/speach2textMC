@@ -256,7 +256,7 @@ public class PersonalizedLearningStore {
             }
         } catch (Throwable t) {
             // Corrupted or malformed file: back up to .bak and start fresh
-            System.err.println("[SpeakCraft] Warning: Failed to parse learned corrections (" + t.getMessage() + "). Backing up to .bak.");
+            System.err.println("[Voice2Text] Warning: Failed to parse learned corrections (" + t.getMessage() + "). Backing up to .bak.");
             try {
                 File bakFile = new File(storageFile.getParentFile(), storageFile.getName() + ".bak");
                 if (storageFile.exists()) {
@@ -297,7 +297,7 @@ public class PersonalizedLearningStore {
                 gson.toJson(root, writer);
             }
         } catch (Throwable t) {
-            System.err.println("[SpeakCraft] Failed to save learned corrections: " + t.getMessage());
+            System.err.println("[Voice2Text] Failed to save learned corrections: " + t.getMessage());
         }
     }
 }

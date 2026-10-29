@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "voice2text",
   "version": "${version}",
-  "name": "SpeakCraft",
-  "description": "SpeakCraft: Real-time client-side voice-to-text transcription mod for Minecraft chat with offline-first speech recognition.",
+  "name": "Voice2Text",
+  "description": "Voice2Text: Real-time client-side voice-to-text transcription mod for Minecraft chat with offline-first speech recognition.",
   "authors": [
     "Voice2Text Development Team"
   ],

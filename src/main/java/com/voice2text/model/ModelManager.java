@@ -37,7 +37,7 @@ public class ModelManager {
     private final Map<String, AtomicBoolean> cancellationTokens = new ConcurrentHashMap<>();
 
     private final ExecutorService downloadExecutor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "SpeakCraft-ModelDownloader");
+        Thread t = new Thread(r, "Voice2Text-ModelDownloader");
         t.setDaemon(true);
         return t;
     });
@@ -557,7 +557,7 @@ public class ModelManager {
         String currentUrl = urlString;
         for (int hops = 0; hops < 5; hops++) {
             HttpURLConnection conn = (HttpURLConnection) URI.create(currentUrl).toURL().openConnection();
-            conn.setRequestProperty("User-Agent", "SpeakCraft-Minecraft-Mod/1.0.0");
+            conn.setRequestProperty("User-Agent", "Voice2Text-Minecraft-Mod/1.0.0");
             conn.setConnectTimeout(connectTimeout);
             conn.setReadTimeout(readTimeout);
             conn.setInstanceFollowRedirects(true);

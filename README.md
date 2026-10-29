@@ -1,4 +1,4 @@
-# SpeakCraft — Minecraft Real-Time Voice-to-Text Client Mod
+# Voice2Text — Minecraft Real-Time Voice-to-Text Client Mod
 
 [![Minecraft 26.2 & 26.3](https://img.shields.io/badge/Minecraft-26.2%20%7C%2026.3-brightgreen.svg)]()
 [![ModLoader Fabric](https://img.shields.io/badge/ModLoader-Fabric-blue.svg)]()
@@ -11,9 +11,9 @@ A high-performance, accessibility-focused, **client-side only** Minecraft mod th
 
 ## 1. Key Features
 
-- **Dedicated SpeakCraft Controls Category**: Integrated natively into Minecraft's controls menu (`Options → Controls → Key Binds → SpeakCraft`) with conflict detection and real-time bidirectional synchronization.
+- **Dedicated Voice2Text Controls Category**: Integrated natively into Minecraft's controls menu (`Options → Controls → Key Binds → Voice2Text`) with conflict detection and real-time bidirectional synchronization.
 - **Dual Recording Modes**:
-  - **Activation Mode (Press to Start, Press Again to Stop)**: Configurable activation key (default `T`). Automatically detects conflicts against registered Minecraft keybinds (such as vanilla chat). If conflicting, double-tap activates SpeakCraft without triggering the vanilla action, while a single tap preserves the vanilla action. If unconflicted, single-tap starts and single-tap stops.
+  - **Activation Mode (Press to Start, Press Again to Stop)**: Configurable activation key (default `T`). Automatically detects conflicts against registered Minecraft keybinds (such as vanilla chat). If conflicting, double-tap activates Voice2Text without triggering the vanilla action, while a single tap preserves the vanilla action. If unconflicted, single-tap starts and single-tap stops.
   - **Hold-to-Talk Mode (Push-to-Talk)**: Dedicated key (default `V`). Press and hold to record continuously; release to stop, finalize the transcription, and insert it as a draft into chat.
 - **Live Real-Time Streaming Dictation**: Recognized words appear progressively as you speak with low latency, just like live voice dictation in modern AI chat applications.
 - **Player Review & Never Auto-Send**: Recording does NOT prematurely open chat while you are playing. When recording stops, the finalized speech is placed safely into Minecraft's chat input as a draft. The player reviews the message and presses `Enter` to send.
@@ -39,23 +39,23 @@ A high-performance, accessibility-focused, **client-side only** Minecraft mod th
 
 ## 2. Keyboard Controls & Dedicated Category
 
-SpeakCraft registers all 4 controls as genuine Minecraft key mappings inside the dedicated **SpeakCraft** category:
+Voice2Text registers all 4 controls as genuine Minecraft key mappings inside the dedicated **Voice2Text** category:
 
-`Options → Controls → Key Binds → SpeakCraft`
+`Options → Controls → Key Binds → Voice2Text`
 
 | Control | Default Key | Mode / State | Behavior |
 | :--- | :--- | :--- | :--- |
-| **Activation Key** | `T` (or remapped) | Activation Mode | **With conflict (e.g. Vanilla Chat)**: Double-tap to start/stop SpeakCraft. Single tap opens vanilla chat.<br>**Without conflict**: Single tap starts recording; single tap stops recording. |
+| **Activation Key** | `T` (or remapped) | Activation Mode | **With conflict (e.g. Vanilla Chat)**: Double-tap to start/stop Voice2Text. Single tap opens vanilla chat.<br>**Without conflict**: Single tap starts recording; single tap stops recording. |
 | **Hold-to-Talk (Push-to-Talk)** | `V` (or remapped) | Hold-to-Talk Mode | Press and hold to record continuously. Release to stop and insert finalized draft into chat. |
 | **Stop & Draft Key** | `P` | Active Recording | Stops listening immediately in either mode, commits the transcription to the chat field, and preserves draft for editing. |
-| **Config Hotkey** | `O` | In-Game | Opens the SpeakCraft settings, microphone selector, and speech model manager screen. |
+| **Config Hotkey** | `O` | In-Game | Opens the Voice2Text settings, microphone selector, and speech model manager screen. |
 | **Cancel Capture** | `Escape` | Active Recording | Immediately stops microphone capture without sending. Preserves existing draft. |
 
 ---
 
 ## 3. Dedicated Folder Structure
 
-All SpeakCraft files are stored in the active Minecraft game directory:
+All Voice2Text files are stored in the active Minecraft game directory:
 
 ```
 .minecraft/

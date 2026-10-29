@@ -8,7 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 
 /**
- * Manages configurable keybinds for SpeakCraft, providing key code
+ * Manages configurable keybinds for Voice2Text, providing key code
  * validation, name resolution, key matching, and bidirectional synchronization with Minecraft KeyMappings.
  */
 public class KeybindManager {
@@ -38,7 +38,7 @@ public class KeybindManager {
     }
 
     /**
-     * Registers all 4 SpeakCraft keymappings.
+     * Registers all 4 Voice2Text keymappings.
      */
     public void setKeyMappings(KeyMapping activationKeyMapping,
                                KeyMapping toggleKeyMapping,
@@ -232,12 +232,13 @@ public class KeybindManager {
 
         for (KeyMapping mapping : minecraft.options.keyMappings) {
             if (mapping == null) continue;
-            // Skip SpeakCraft's own key mappings
+            // Skip Voice2Text's own key mappings
             if (mapping == activationKeyMapping || mapping == toggleKeyMapping ||
                 mapping == stopKeyMapping || mapping == configKeyMapping) {
                 continue;
             }
-            if (mapping.getCategory() == com.voice2text.VoiceToTextMod.SPEAKCRAFT_CATEGORY) {
+            if (mapping.getCategory() == com.voice2text.VoiceToTextMod.VOICE2TEXT_CATEGORY ||
+                mapping.getCategory() == com.voice2text.VoiceToTextMod.SPEAKCRAFT_CATEGORY) {
                 continue;
             }
             int bound = getBoundKey(mapping);
@@ -258,7 +259,8 @@ public class KeybindManager {
                 mapping == stopKeyMapping || mapping == configKeyMapping) {
                 continue;
             }
-            if (mapping.getCategory() == com.voice2text.VoiceToTextMod.SPEAKCRAFT_CATEGORY) {
+            if (mapping.getCategory() == com.voice2text.VoiceToTextMod.VOICE2TEXT_CATEGORY ||
+                mapping.getCategory() == com.voice2text.VoiceToTextMod.SPEAKCRAFT_CATEGORY) {
                 continue;
             }
             int bound = getBoundKey(mapping);

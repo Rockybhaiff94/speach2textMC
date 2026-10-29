@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * In-game configuration screen allowing players to configure SpeakCraft voice options:
+ * In-game configuration screen allowing players to configure Voice2Text voice options:
  * - Recording Mode (Hold-to-Talk vs Toggle Recording)
  * - Automatic Send (OFF by default)
  * - Keybinds and clear vanilla conflict warnings
@@ -55,7 +55,7 @@ public class VoiceConfigScreen extends Screen {
     private int currentMicIndex = 0;
 
     public VoiceConfigScreen(Screen parent) {
-        super(Component.literal("SpeakCraft Settings"));
+        super(Component.literal("Voice2Text Settings"));
         this.parent = parent;
 
         VoiceToTextMod mod = VoiceToTextMod.getInstance();
@@ -187,7 +187,7 @@ public class VoiceConfigScreen extends Screen {
                     selectedKeybind = (selectedKeybind == SelectedKeybind.CONFIG) ? SelectedKeybind.NONE : SelectedKeybind.CONFIG;
                     rebuildWidgets();
                 }
-        ).tooltip(Tooltip.create(Component.literal("Hotkey to open SpeakCraft Settings. Default: O")))
+        ).tooltip(Tooltip.create(Component.literal("Hotkey to open Voice2Text Settings. Default: O")))
          .bounds(centerX + 4, startY + (rowSpacing * 2), btnW, btnH).build());
 
         // --- ROW 4: General Formatting (Capitalization & Voice Punctuation) ---
@@ -440,7 +440,7 @@ public class VoiceConfigScreen extends Screen {
         int centerX = this.width / 2;
 
         // Header Title
-        extractor.centeredText(this.font, "§lSpeakCraft Settings", centerX, 6, 0xFFFFFF);
+        extractor.centeredText(this.font, "§lVoice2Text Settings", centerX, 6, 0xFFFFFF);
         extractor.centeredText(this.font, "§7Real-Time Offline Speech-to-Text for Minecraft", centerX, 16, 0x90A4B0BE);
 
         // Display Keybind Conflicts or Duplicate Bindings
@@ -477,9 +477,9 @@ public class VoiceConfigScreen extends Screen {
             // Display first conflict warning prominently
             String firstWarn = warnings.get(0);
             extractor.centeredText(this.font, "§e⚠ " + firstWarn, centerX, footerY - 4, 0xFFFF55);
-            extractor.centeredText(this.font, "§7Pressing key will trigger SpeakCraft. You can remap in Controls.", centerX, footerY + 6, 0xAAAAAA);
+            extractor.centeredText(this.font, "§7Pressing key will trigger Voice2Text. You can remap in Controls.", centerX, footerY + 6, 0xAAAAAA);
         } else {
-            extractor.centeredText(this.font, "§7Keys configurable in Options → Controls → Key Binds → SpeakCraft", centerX, footerY, 0x8090A0B0);
+            extractor.centeredText(this.font, "§7Keys configurable in Options → Controls → Key Binds → Voice2Text", centerX, footerY, 0x8090A0B0);
         }
     }
 

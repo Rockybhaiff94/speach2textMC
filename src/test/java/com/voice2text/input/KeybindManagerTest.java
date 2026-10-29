@@ -23,8 +23,10 @@ public class KeybindManagerTest {
 
     @Test
     public void testSpeakCraftCategoryRegistered() {
+        assertNotNull(VoiceToTextMod.VOICE2TEXT_CATEGORY);
         assertNotNull(VoiceToTextMod.SPEAKCRAFT_CATEGORY);
-        assertEquals(Identifier.fromNamespaceAndPath("speakcraft", "main"), VoiceToTextMod.SPEAKCRAFT_CATEGORY.id());
+        assertEquals(Identifier.fromNamespaceAndPath("voice2text", "main"), VoiceToTextMod.VOICE2TEXT_CATEGORY.id());
+        assertEquals(Identifier.fromNamespaceAndPath("voice2text", "main"), VoiceToTextMod.SPEAKCRAFT_CATEGORY.id());
     }
 
     @Test

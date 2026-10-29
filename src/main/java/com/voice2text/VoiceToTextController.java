@@ -91,7 +91,7 @@ public class VoiceToTextController implements RecognitionListener {
             this.ownsAsyncExecutor = false;
         } else {
             this.asyncExecutor = Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "SpeakCraft-AsyncWorker");
+                Thread t = new Thread(r, "Voice2Text-AsyncWorker");
                 t.setDaemon(true);
                 return t;
             });
@@ -126,7 +126,7 @@ public class VoiceToTextController implements RecognitionListener {
         this.audioCaptureService.setErrorListener(this::onAudioError);
 
         com.voice2text.audio.AudioDeviceManager.setFallbackNotificationListener(msg ->
-                chatBridge.displayClientMessage("§e[SpeakCraft] " + msg, false)
+                chatBridge.displayClientMessage("§e[Voice2Text] " + msg, false)
         );
     }
 
@@ -206,8 +206,8 @@ public class VoiceToTextController implements RecognitionListener {
         if (!modelManager.isModelInstalled(modelId)) {
             SpeechModelInfo info = modelManager.getModelInfo(modelId);
             String modelName = info != null ? info.getDisplayName() : modelId;
-            chatBridge.displayClientMessage("§c[SpeakCraft] Speech model not installed: " + modelName +
-                    ". Press " + config.getConfigKey() + " to open SpeakCraft settings and download it.", true);
+            chatBridge.displayClientMessage("§c[Voice2Text] Speech model not installed: " + modelName +
+                    ". Press " + config.getConfigKey() + " to open Voice2Text settings and download it.", true);
             statusMessage = "Model Missing";
             notifyStateChange();
             return;
@@ -240,7 +240,7 @@ public class VoiceToTextController implements RecognitionListener {
                         this.loadedModelId = modelId;
                     } catch (IOException e) {
                         this.loadedModelId = null;
-                        chatBridge.displayClientMessage("§c[SpeakCraft] Failed to load speech model: " + e.getMessage(), true);
+                        chatBridge.displayClientMessage("§c[Voice2Text] Failed to load speech model: " + e.getMessage(), true);
                         statusMessage = "Model Load Failed";
                         session.transitionToCancelled();
                         notifyStateChange();
@@ -270,7 +270,7 @@ public class VoiceToTextController implements RecognitionListener {
                     handlePendingStopOrCancel(session);
                 }
             } catch (Throwable e) {
-                chatBridge.displayClientMessage("§c[SpeakCraft] Failed to open microphone: " + e.getMessage(), true);
+                chatBridge.displayClientMessage("§c[Voice2Text] Failed to open microphone: " + e.getMessage(), true);
                 statusMessage = "Mic Error";
                 active.set(false);
                 session.transitionToCancelled();
@@ -320,7 +320,7 @@ public class VoiceToTextController implements RecognitionListener {
 
     public void logDiagnostic(String stage, String message) {
         if (diagnosticLoggingEnabled || System.getProperty("voice2text.debug") != null) {
-            System.out.println("[SpeakCraft-Diagnostic] [" + stage + "] " + message);
+            System.out.println("[Voice2Text-Diagnostic] [" + stage + "] " + message);
         }
     }
 
