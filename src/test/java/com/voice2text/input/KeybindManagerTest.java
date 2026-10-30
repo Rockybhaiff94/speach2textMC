@@ -119,6 +119,59 @@ public class KeybindManagerTest {
         assertEquals("ESCAPE", KeybindManager.resolveKeyName(InputConstants.KEY_ESCAPE));
         assertEquals("V", KeybindManager.resolveKeyName(InputConstants.KEY_V));
         assertEquals("O", KeybindManager.resolveKeyName(InputConstants.KEY_O));
+        assertEquals("F6", KeybindManager.resolveKeyName(InputConstants.KEY_F6));
+        assertTrue(KeybindManager.resolveKeyName(InputConstants.KEY_RSHIFT).toUpperCase().contains("SHIFT"));
+    }
+
+    @Test
+    public void testLegacyNumericIdentifierMigration() {
+        // Test normalization of internal-looking values such as key.keyboard.23, key.keyboard.25, etc.
+        assertEquals("T", KeybindManager.normalizeKeyName("key.keyboard.23"));
+        assertEquals("V", KeybindManager.normalizeKeyName("key.keyboard.25"));
+        assertEquals("O", KeybindManager.normalizeKeyName("key.keyboard.18"));
+        assertEquals("P", KeybindManager.normalizeKeyName("key.keyboard.19"));
+        assertEquals("T", KeybindManager.normalizeKeyName("23"));
+        assertEquals("V", KeybindManager.normalizeKeyName("25"));
+        assertEquals("O", KeybindManager.normalizeKeyName("18"));
+        assertEquals("P", KeybindManager.normalizeKeyName("19"));
+        assertEquals("T", KeybindManager.normalizeKeyName("key.keyboard.84"));
+        assertEquals("V", KeybindManager.normalizeKeyName("key.keyboard.86"));
+
+        // Verify config migration
+        VoiceToTextConfig legacyConfig = new VoiceToTextConfig();
+        legacyConfig.setActivationKey("key.keyboard.23");
+        legacyConfig.setDedicatedToggleKey("key.keyboard.25");
+        legacyConfig.setConfigKey("18");
+        legacyConfig.setStopKey("19");
+
+        legacyConfig.validate();
+
+        assertEquals("T", legacyConfig.getActivationKey());
+        assertEquals(InputConstants.KEY_T, legacyConfig.getActivationKeyCode());
+        assertEquals("V", legacyConfig.getDedicatedToggleKey());
+        assertEquals(InputConstants.KEY_V, legacyConfig.getDedicatedToggleKeyCode());
+        assertEquals("O", legacyConfig.getConfigKey());
+        assertEquals(InputConstants.KEY_O, legacyConfig.getConfigKeyCode());
+        assertEquals("P", legacyConfig.getStopKey());
+        assertEquals(InputConstants.KEY_P, legacyConfig.getStopKeyCode());
+
+        assertFalse(legacyConfig.getActivationKey().contains("key.keyboard."));
+        assertFalse(legacyConfig.getDedicatedToggleKey().contains("key.keyboard."));
+    }
+
+    @Test
+    public void testMouseKeybinds() {
+        InputConstants.Key mouse4 = KeybindManager.createMouseKey(4);
+        assertNotNull(mouse4);
+        assertEquals("Mouse 4", KeybindManager.resolveKeyName(mouse4));
+
+        InputConstants.Key mouse5 = KeybindManager.createMouseKey(5);
+        assertEquals("Mouse 5", KeybindManager.resolveKeyName(mouse5));
+
+        keybindManager.setActivationKey(4, "Mouse 4", true);
+        assertEquals(4, keybindManager.getActivationKeyCode());
+        assertEquals("Mouse 4", keybindManager.getActivationKeyName());
+        assertTrue(config.isActivationKeyMouse());
     }
 
     @Test

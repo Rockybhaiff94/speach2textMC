@@ -2,23 +2,16 @@ package com.voice2text.transcription;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.io.File;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TranscriptionCorrectionServiceTest {
 
     private TranscriptionCorrectionService correctionService;
-    private PersonalizedLearningStore learningStore;
 
     @BeforeEach
-    public void setUp(@TempDir Path tempDir) {
-        File storeFile = tempDir.resolve("learned_corrections.json").toFile();
-        learningStore = new PersonalizedLearningStore(storeFile);
-        correctionService = new TranscriptionCorrectionService(learningStore);
+    public void setUp() {
+        correctionService = new TranscriptionCorrectionService();
     }
 
     @Test
@@ -107,6 +100,26 @@ public class TranscriptionCorrectionServiceTest {
         assertEquals("craft a diamond pickaxe", correctionService.correctFinalizedText("craft a diamond pickex"));
         assertEquals("back to spawn", correctionService.correctFinalizedText("back to sapwn"));
         assertEquals("jaldi VC mein aao", correctionService.correctFinalizedText("jaldi weesy mein aao"));
+
+        // Key prompt phrases:
+        // "भाई, मेरा Minecraft server restart कर दो।"
+        assertEquals("भाई, मेरा Minecraft server restart कर दो।",
+                correctionService.correctFinalizedText("भाई, मेरा Minecraft sarvar ristart कर दो।"));
+        assertEquals("भाई मेरा Minecraft server restart कर दो",
+                correctionService.correctFinalizedText("भाई मेरा Minecraft sarvar ristart कर दो"));
+
+        // "इस player को party में invite करो।"
+        assertEquals("इस player को party में invite करो।",
+                correctionService.correctFinalizedText("इस playar को parti में invaite करो।"));
+
+        // "आज हम survival में base बनाने वाले हैं।"
+        assertEquals("आज हम survival में base बनाने वाले हैं।",
+                correctionService.correctFinalizedText("आज हम survivel में baes बनाने वाले हैं।"));
+
+        // Pure Hindi sentences preserved
+        assertEquals("मुझे खाना चाहिए।", correctionService.correctFinalizedText("मुझे खाना चाहिए।"));
+        assertEquals("मैं अभी Minecraft खेल रहा हूँ।", correctionService.correctFinalizedText("मैं अभी Minecraft खेल रहा हूँ।"));
+        assertEquals("तुम मेरे सर्वर पर आ सकते हो।", correctionService.correctFinalizedText("तुम मेरे सर्वर पर आ सकते हो।"));
     }
 
     @Test
@@ -115,6 +128,37 @@ public class TranscriptionCorrectionServiceTest {
         assertEquals("Food", correctionService.correctFinalizedText("Phood"));
         assertEquals("FOOD", correctionService.correctFinalizedText("PHOOD"));
         assertEquals("Test Build", correctionService.correctFinalizedText("Test Bil"));
+    }
+
+    @Test
+    public void testUserExpectedExamplesInCorrectionService() {
+        // 1. "I am talking to you right now." - Both direct and phonetic repairs
+        assertEquals("I am talking to you right now.",
+                correctionService.correctFinalizedText("I am talking to you right now."));
+        assertEquals("I am talking to you right now.",
+                correctionService.correctFinalizedText("Aai em talking tu yu right nau."));
+        assertEquals("I am talking to you right now",
+                correctionService.correctFinalizedText("aai em talking tu yu right nau"));
+
+        // 2. "Mera naam Ashish hai."
+        assertEquals("Mera naam Ashish hai.",
+                correctionService.correctFinalizedText("Mera naam Ashish hai."));
+        assertEquals("Mera naam Ashish hai",
+                correctionService.correctFinalizedText("mera naam ashish hai"));
+
+        // 3. "Mera naam is Ashish and I am working."
+        assertEquals("Mera naam is Ashish and I am working.",
+                correctionService.correctFinalizedText("Mera naam is Ashish and I am working."));
+        assertEquals("Mera naam is Ashish and I am working",
+                correctionService.correctFinalizedText("mera naam is ashish and i am working"));
+        assertEquals("Mera naam is Ashish and I am working",
+                correctionService.correctFinalizedText("mera naam iz ashish and aai em varkimng"));
+
+        // 4. "Today mujhe Minecraft khelna hai."
+        assertEquals("Today mujhe Minecraft khelna hai.",
+                correctionService.correctFinalizedText("Today mujhe Minecraft khelna hai."));
+        assertEquals("Today mujhe Minecraft khelna hai",
+                correctionService.correctFinalizedText("today mujhe minecraft khelna hai"));
     }
 }
 

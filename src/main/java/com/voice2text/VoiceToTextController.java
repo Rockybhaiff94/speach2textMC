@@ -15,14 +15,16 @@ import com.voice2text.session.RecordingSession;
 import com.voice2text.speech.EngineState;
 import com.voice2text.speech.RecognitionListener;
 import com.voice2text.speech.RecognitionResult;
+import com.voice2text.speech.SpeechEngineManager;
 import com.voice2text.speech.SpeechRecognitionEngine;
+import com.voice2text.speech.indic.IndicConformerSpeechEngine;
+import com.voice2text.speech.shruti.ShrutiSpeechEngine;
 import com.voice2text.speech.vosk.VoskSpeechEngine;
-import com.voice2text.transcription.PersonalizedLearningStore;
+import com.voice2text.speech.whisper.WhisperSpeechEngine;
 import com.voice2text.transcription.TranscriptionBuffer;
 import com.voice2text.transcription.TranscriptionCorrectionService;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,8 +40,8 @@ import java.util.function.Consumer;
  * - Asynchronous, non-blocking recording startup and finalization on dedicated background worker.
  * - Zero Minecraft client thread blocking on microphone acquisition, Java Sound line opening,
  *   or Kaldi/Vosk speech model loading.
- * - Integration of ContextAwareCorrectionService and PersonalizedLearningStore for Hindi, English,
- *   and Hinglish speech recognition improvement.
+ * - Integration of TranscriptionCorrectionService for Hindi, English,
+ *   and Hinglish speech recognition.
  */
 public class VoiceToTextController implements RecognitionListener {
 
@@ -53,8 +55,9 @@ public class VoiceToTextController implements RecognitionListener {
 
     private final Executor asyncExecutor;
     private final boolean ownsAsyncExecutor;
-    private final PersonalizedLearningStore learningStore;
     private final TranscriptionCorrectionService correctionService;
+    private final com.voice2text.speech.SpeechEngineManager engineManager = new com.voice2text.speech.SpeechEngineManager();
+    private final boolean customEngineInjected;
 
     private SpeechRecognitionEngine speechEngine;
     private AudioCaptureService audioCaptureService;
@@ -76,15 +79,20 @@ public class VoiceToTextController implements RecognitionListener {
                                  Executor clientThreadExecutor,
                                  SpeechRecognitionEngine engine,
                                  AudioSource audioSource,
-                                 PersonalizedLearningStore learningStore,
                                  TranscriptionCorrectionService correctionService,
                                  Executor asyncExecutor) {
         this.configManager = configManager;
         this.modelManager = modelManager;
         this.chatBridge = chatBridge;
         this.clientThreadExecutor = clientThreadExecutor != null ? clientThreadExecutor : Runnable::run;
+        this.customEngineInjected = (engine != null);
         this.speechEngine = engine != null ? engine : new VoskSpeechEngine();
         this.audioSource = audioSource != null ? audioSource : new MicrophoneAudioSource();
+
+        VoiceToTextConfig config = configManager.getConfig();
+        if (engine != null && (engine.getState() == EngineState.READY || engine.getState() == EngineState.LISTENING)) {
+            this.loadedModelId = config.getActiveModelId();
+        }
 
         if (asyncExecutor != null) {
             this.asyncExecutor = asyncExecutor;
@@ -98,19 +106,8 @@ public class VoiceToTextController implements RecognitionListener {
             this.ownsAsyncExecutor = true;
         }
 
-        if (learningStore != null) {
-            this.learningStore = learningStore;
-        } else {
-            File baseDir = modelManager != null && modelManager.getModelsBaseDir() != null
-                    ? (modelManager.getModelsBaseDir().getParentFile() != null ? modelManager.getModelsBaseDir().getParentFile() : modelManager.getModelsBaseDir())
-                    : new File(".");
-            File storeFile = new File(baseDir, "learned_corrections.json");
-            this.learningStore = new PersonalizedLearningStore(storeFile);
-        }
+        this.correctionService = correctionService != null ? correctionService : new TranscriptionCorrectionService();
 
-        this.correctionService = correctionService != null ? correctionService : new TranscriptionCorrectionService(this.learningStore);
-
-        VoiceToTextConfig config = configManager.getConfig();
         this.keybindManager = new KeybindManager(config);
         this.inputStateMachine = new InputStateMachine(config.isAutomaticSend());
         this.inputStateMachine.setActionListener(this::handleKeyAction);
@@ -128,6 +125,18 @@ public class VoiceToTextController implements RecognitionListener {
         com.voice2text.audio.AudioDeviceManager.setFallbackNotificationListener(msg ->
                 chatBridge.displayClientMessage("§e[Voice2Text] " + msg, false)
         );
+    }
+
+    public VoiceToTextController(ConfigManager configManager,
+                                 ModelManager modelManager,
+                                 MinecraftChatBridge chatBridge,
+                                 Executor clientThreadExecutor,
+                                 SpeechRecognitionEngine engine,
+                                 AudioSource audioSource,
+                                 Object unusedLearningStore,
+                                 TranscriptionCorrectionService correctionService,
+                                 Executor asyncExecutor) {
+        this(configManager, modelManager, chatBridge, clientThreadExecutor, engine, audioSource, correctionService, asyncExecutor);
     }
 
     public VoiceToTextController(ConfigManager configManager,
@@ -155,12 +164,8 @@ public class VoiceToTextController implements RecognitionListener {
         String modelId = config.getActiveModelId();
         if (modelManager.isModelInstalled(modelId) && loadedModelId == null) {
             asyncExecutor.execute(() -> {
-                File modelDir = modelManager.getModelDir(modelId);
                 try {
-                    speechEngine.initialize(modelDir.getAbsolutePath());
-                    this.loadedModelId = modelId;
-                    statusMessage = "Ready";
-                    notifyStateChange();
+                    switchModel(modelId);
                 } catch (Throwable ignored) {
                 }
             });
@@ -203,7 +208,7 @@ public class VoiceToTextController implements RecognitionListener {
         String modelId = config.getActiveModelId();
 
         // Check if model is downloaded
-        if (!modelManager.isModelInstalled(modelId)) {
+        if (!customEngineInjected && !modelManager.isModelInstalled(modelId)) {
             SpeechModelInfo info = modelManager.getModelInfo(modelId);
             String modelName = info != null ? info.getDisplayName() : modelId;
             chatBridge.displayClientMessage("§c[Voice2Text] Speech model not installed: " + modelName +
@@ -232,15 +237,10 @@ public class VoiceToTextController implements RecognitionListener {
         asyncExecutor.execute(() -> {
             try {
                 // Initialize or switch engine model if needed
-                File modelDir = modelManager.getModelDir(modelId);
                 if (!modelId.equals(loadedModelId) || speechEngine.getState() == EngineState.UNINITIALIZED || speechEngine.getState() == EngineState.CLOSED) {
-                    try {
-                        speechEngine.close();
-                        speechEngine.initialize(modelDir.getAbsolutePath());
-                        this.loadedModelId = modelId;
-                    } catch (IOException e) {
-                        this.loadedModelId = null;
-                        chatBridge.displayClientMessage("§c[Voice2Text] Failed to load speech model: " + e.getMessage(), true);
+                    boolean ok = switchModel(modelId);
+                    if (!ok) {
+                        chatBridge.displayClientMessage("§c[Voice2Text] Failed to load speech model: " + modelId, true);
                         statusMessage = "Model Load Failed";
                         session.transitionToCancelled();
                         notifyStateChange();
@@ -525,6 +525,24 @@ public class VoiceToTextController implements RecognitionListener {
         if (cfg == null) return false;
         String lang = cfg.getSpeechLanguage();
         String modelId = cfg.getActiveModelId();
+
+        // If the active model or speech language is English or another non-Hindi language, never force Hindi mode
+        if (modelId != null && (modelId.contains("en-us") || modelId.contains("en-in") || modelId.contains("-en")
+                || modelId.contains("-de") || modelId.contains("-es") || modelId.contains("-fr")
+                || modelId.contains("-it") || modelId.contains("-pt") || modelId.contains("-ru"))) {
+            return false;
+        }
+        if (lang != null && (lang.startsWith("en") || lang.startsWith("de") || lang.startsWith("es") || lang.startsWith("fr")
+                || lang.startsWith("it") || lang.startsWith("pt") || lang.startsWith("ru"))) {
+            return false;
+        }
+
+        if ("DEVANAGARI".equalsIgnoreCase(cfg.getOutputScript())) {
+            return false;
+        }
+        if ("ROMAN_HINDI".equalsIgnoreCase(cfg.getOutputScript())) {
+            return true;
+        }
         return (lang != null && (lang.equalsIgnoreCase("hi-en") || lang.equalsIgnoreCase("hinglish")))
                 || (modelId != null && modelId.toLowerCase().contains("hinglish"));
     }
@@ -547,8 +565,14 @@ public class VoiceToTextController implements RecognitionListener {
         if (isRomanizedHinglishActive()) {
             String original = rawText;
             rawText = com.voice2text.transcription.HinglishTransliterationService.transliterate(rawText);
+            if (correctionService != null) {
+                rawText = correctionService.correctFinalizedText(rawText);
+            }
             logDiagnostic("ASR-Partial", "Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
         } else {
+            if (correctionService != null) {
+                rawText = correctionService.correctFinalizedText(rawText);
+            }
             logDiagnostic("ASR-Partial", "Raw: '" + rawText + "'");
         }
         transcriptionBuffer.updatePartial(rawText);
@@ -570,16 +594,18 @@ public class VoiceToTextController implements RecognitionListener {
         }
 
         String rawText = result.getText();
-        // Context-aware speech recognition correction
-        if (correctionService != null) {
-            rawText = correctionService.correctFinalizedText(rawText);
-        }
 
         if (isRomanizedHinglishActive()) {
             String original = rawText;
             rawText = com.voice2text.transcription.HinglishTransliterationService.transliterate(rawText);
+            if (correctionService != null) {
+                rawText = correctionService.correctFinalizedText(rawText);
+            }
             logDiagnostic("ASR-Final", "Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
         } else {
+            if (correctionService != null) {
+                rawText = correctionService.correctFinalizedText(rawText);
+            }
             logDiagnostic("ASR-Final", "Raw: '" + rawText + "'");
         }
 
@@ -694,18 +720,8 @@ public class VoiceToTextController implements RecognitionListener {
         return modelManager;
     }
 
-    public PersonalizedLearningStore getLearningStore() {
-        return learningStore;
-    }
-
     public TranscriptionCorrectionService getCorrectionService() {
         return correctionService;
-    }
-
-    public void learnCorrection(String mistake, String correction, String context) {
-        if (learningStore != null) {
-            learningStore.recordCorrection(mistake, correction, context);
-        }
     }
 
     public void setStateChangeListener(Consumer<VoiceToTextController> listener) {
@@ -717,26 +733,80 @@ public class VoiceToTextController implements RecognitionListener {
     }
 
     public synchronized boolean switchModel(String modelId) {
-        if (modelId == null || modelId.equals(loadedModelId)) {
+        if (modelId == null) {
+            return false;
+        }
+        if (modelId.equals(loadedModelId) && speechEngine.getState() == EngineState.READY) {
             return true;
         }
         if (!modelManager.isModelInstalled(modelId)) {
             return false;
         }
         File modelDir = modelManager.getModelDir(modelId);
+
+        if (customEngineInjected && !(speechEngine instanceof VoskSpeechEngine
+                || speechEngine instanceof WhisperSpeechEngine
+                || speechEngine instanceof IndicConformerSpeechEngine
+                || speechEngine instanceof ShrutiSpeechEngine)) {
+            try {
+                speechEngine.close();
+                speechEngine.initialize(modelDir != null ? modelDir.getAbsolutePath() : "");
+                this.loadedModelId = modelId;
+                statusMessage = "Ready";
+                notifyStateChange();
+                return true;
+            } catch (Throwable e) {
+                this.loadedModelId = null;
+                statusMessage = "Model Load Failed";
+                notifyStateChange();
+                return false;
+            }
+        }
+
+        SpeechModelInfo info = modelManager.getModelInfo(modelId);
+
+        if (!engineManager.verifyActivationCompatibility(info, modelDir)) {
+            return false;
+        }
+
         try {
-            speechEngine.close();
+            SpeechRecognitionEngine newEngine = engineManager.getOrCreateEngine(info);
+            if (newEngine != speechEngine) {
+                if (speechEngine != null) {
+                    speechEngine.close();
+                }
+                this.speechEngine = newEngine;
+                this.speechEngine.setListener(this);
+                if (this.audioCaptureService != null) {
+                    this.audioCaptureService.setSpeechEngine(this.speechEngine);
+                }
+            } else {
+                speechEngine.close();
+            }
+
             speechEngine.initialize(modelDir.getAbsolutePath());
             this.loadedModelId = modelId;
+
+            VoiceToTextConfig cfg = configManager.getConfig();
+            cfg.setActiveModelId(modelId);
+            if (info != null && info.getLanguageCode() != null) {
+                cfg.setSpeechLanguage(info.getLanguageCode());
+            }
+            configManager.save(cfg);
+
             statusMessage = "Ready";
             notifyStateChange();
             return true;
-        } catch (IOException e) {
+        } catch (Throwable e) {
             this.loadedModelId = null;
             statusMessage = "Model Load Failed";
             notifyStateChange();
             return false;
         }
+    }
+
+    public SpeechEngineManager getEngineManager() {
+        return engineManager;
     }
 
     public void shutdown() {
@@ -752,6 +822,9 @@ public class VoiceToTextController implements RecognitionListener {
         }
         if (speechEngine != null) {
             speechEngine.close();
+        }
+        if (engineManager != null) {
+            engineManager.closeAll();
         }
         if (ownsAsyncExecutor && asyncExecutor instanceof ExecutorService) {
             ((ExecutorService) asyncExecutor).shutdownNow();

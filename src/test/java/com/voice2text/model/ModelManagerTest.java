@@ -77,7 +77,47 @@ public class ModelManagerTest {
         assertEquals("hi-en", hinglish.getLanguageCode());
         assertEquals("Hinglish (Hindi + English)", hinglish.getDisplayName());
 
-        assertTrue(manager.getAvailableModels().size() >= 10);
+        // OpenAI Whisper Models
+        SpeechModelInfo wL3 = manager.getModelInfo("whisper-large-v3");
+        assertNotNull(wL3);
+        assertEquals(ModelFamily.WHISPER, wL3.getFamily());
+
+        SpeechModelInfo wTurbo = manager.getModelInfo("whisper-large-v3-turbo");
+        assertNotNull(wTurbo);
+        assertEquals("OpenAI Whisper", wTurbo.getCategory());
+
+        SpeechModelInfo wSmall = manager.getModelInfo("whisper-small");
+        assertNotNull(wSmall);
+
+        SpeechModelInfo wMedium = manager.getModelInfo("whisper-medium");
+        assertNotNull(wMedium);
+
+        SpeechModelInfo wBase = manager.getModelInfo("whisper-base");
+        assertNotNull(wBase);
+
+        SpeechModelInfo wTiny = manager.getModelInfo("whisper-tiny");
+        assertNotNull(wTiny);
+
+        // Hinglish Specialized Models
+        SpeechModelInfo apex = manager.getModelInfo("whisper-hindi2hinglish-apex");
+        assertNotNull(apex);
+        assertEquals(ModelFamily.HINGLISH_SPECIALIZED, apex.getFamily());
+        assertEquals("Roman Hindi (Hinglish) Direct", apex.getOutputScript());
+
+        SpeechModelInfo swift = manager.getModelInfo("whisper-hindi2hinglish-swift");
+        assertNotNull(swift);
+        assertEquals(ModelFamily.HINGLISH_SPECIALIZED, swift.getFamily());
+
+        // Shruti & IndicConformer
+        SpeechModelInfo shruti = manager.getModelInfo("shruti-asr-hi");
+        assertNotNull(shruti);
+        assertEquals(ModelFamily.SHRUTI, shruti.getFamily());
+
+        SpeechModelInfo indic = manager.getModelInfo("indicconformer-hi");
+        assertNotNull(indic);
+        assertEquals(ModelFamily.INDIC_CONFORMER, indic.getFamily());
+
+        assertTrue(manager.getAvailableModels().size() >= 20);
     }
 
     @Test

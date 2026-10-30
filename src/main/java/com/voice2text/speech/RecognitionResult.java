@@ -17,6 +17,10 @@ public class RecognitionResult {
         this.confidence = confidence;
     }
 
+    public RecognitionResult(String text, boolean isFinal, float confidence) {
+        this(text, isFinal, System.currentTimeMillis(), confidence);
+    }
+
     public RecognitionResult(String text, boolean isFinal) {
         this(text, isFinal, System.currentTimeMillis(), 1.0f);
     }

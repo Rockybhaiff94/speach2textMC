@@ -13,6 +13,20 @@ public class HinglishTransliterationTest {
     }
 
     @Test
+    public void testPromptTargetBhaiMujheEkNewGamingPCBananaHai() {
+        // Spoken: "Bhai mujhe ek new gaming PC banana hai."
+        // With mixed Hindi and English
+        String mixed = "भाई मुझे एक new gaming PC बनाना है";
+        String output = HinglishTransliterationService.transliterate(mixed);
+        assertEquals("bhai mujhe ek new gaming PC banana hai", output);
+
+        // With fully phonetically transcribed Devanagari loanwords
+        String devanagari = "भाई मुझे एक न्यू गेमिंग पीसी बनाना है";
+        String output2 = HinglishTransliterationService.transliterate(devanagari);
+        assertEquals("bhai mujhe ek new gaming PC banana hai", output2);
+    }
+
+    @Test
     public void testMinecraftCommandsAndSymbolsUntouched() {
         String input = "/tp @p ~ ~10 ~ and /give player diamond 64";
         String output = HinglishTransliterationService.transliterate(input);
@@ -180,5 +194,30 @@ public class HinglishTransliterationTest {
         assertNull(HinglishTransliterationService.transliterate(null));
         assertEquals("", HinglishTransliterationService.transliterate(""));
         assertEquals("   ", HinglishTransliterationService.transliterate("   "));
+    }
+
+    @Test
+    public void testUserExpectedExamplesInHinglishTransliteration() {
+        // 1. English speech: "I am talking to you right now."
+        assertEquals("I am talking to you right now.",
+                HinglishTransliterationService.transliterate("I am talking to you right now."));
+        assertEquals("I am talking to you right now",
+                HinglishTransliterationService.transliterate("आई एम टॉकिंग टू यू राइट नाउ"));
+
+        // 2. Hindi speech: "Mera naam Ashish hai."
+        assertEquals("Mera naam Ashish hai.",
+                HinglishTransliterationService.transliterate("Mera naam Ashish hai."));
+
+        // 3. Hinglish speech: "Mera naam is Ashish and I am working."
+        assertEquals("Mera naam is Ashish and I am working.",
+                HinglishTransliterationService.transliterate("Mera naam is Ashish and I am working."));
+        assertEquals("mera naam is Ashish and I am working",
+                HinglishTransliterationService.transliterate("मेरा नाम is आशीष and आई एम वर्किंग"));
+
+        // 4. Code-switched speech: "Today mujhe Minecraft khelna hai."
+        assertEquals("Today mujhe Minecraft khelna hai.",
+                HinglishTransliterationService.transliterate("Today mujhe Minecraft khelna hai."));
+        assertEquals("Today mujhe Minecraft khelna hai",
+                HinglishTransliterationService.transliterate("Today मुझे Minecraft खेलना है"));
     }
 }

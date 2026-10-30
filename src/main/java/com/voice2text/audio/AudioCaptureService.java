@@ -26,7 +26,7 @@ public class AudioCaptureService {
 
     private final AudioSource audioSource;
     private final AudioLevelMeter levelMeter;
-    private final SpeechRecognitionEngine speechEngine;
+    private volatile SpeechRecognitionEngine speechEngine;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final BlockingQueue<byte[]> audioQueue = new ArrayBlockingQueue<>(MAX_QUEUE_CAPACITY);
@@ -42,6 +42,14 @@ public class AudioCaptureService {
         this.audioSource = audioSource;
         this.speechEngine = speechEngine;
         this.levelMeter = new AudioLevelMeter(vadThreshold);
+    }
+
+    public void setSpeechEngine(SpeechRecognitionEngine speechEngine) {
+        this.speechEngine = speechEngine;
+    }
+
+    public SpeechRecognitionEngine getSpeechEngine() {
+        return speechEngine;
     }
 
     public synchronized void start() throws IOException {

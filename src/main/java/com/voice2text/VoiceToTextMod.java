@@ -99,24 +99,28 @@ public class VoiceToTextMod implements ClientModInitializer {
         // Register All 4 Voice2Text Key Mappings under the Voice2Text Category
         this.activationKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.voice2text.activation",
+                config.isActivationKeyMouse() ? com.mojang.blaze3d.platform.InputConstants.Type.MOUSE : com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,
                 config.getActivationKeyCode(),
                 VOICE2TEXT_CATEGORY
         ));
 
         this.toggleKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.voice2text.toggle",
+                config.isDedicatedToggleKeyMouse() ? com.mojang.blaze3d.platform.InputConstants.Type.MOUSE : com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,
                 config.getDedicatedToggleKeyCode(),
                 VOICE2TEXT_CATEGORY
         ));
 
         this.stopKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.voice2text.stop",
+                config.isStopKeyMouse() ? com.mojang.blaze3d.platform.InputConstants.Type.MOUSE : com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,
                 config.getStopKeyCode(),
                 VOICE2TEXT_CATEGORY
         ));
 
         this.configKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.voice2text.config",
+                config.isConfigKeyMouse() ? com.mojang.blaze3d.platform.InputConstants.Type.MOUSE : com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,
                 config.getConfigKeyCode(),
                 VOICE2TEXT_CATEGORY
         ));

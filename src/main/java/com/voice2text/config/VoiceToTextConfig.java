@@ -19,12 +19,16 @@ public class VoiceToTextConfig {
     // Custom Keybind Settings (defaults: T, P, V, O)
     private String activationKey = "T";
     private int activationKeyCode = InputConstants.KEY_T;
+    private boolean activationKeyMouse = false;
     private String stopKey = "P";
     private int stopKeyCode = InputConstants.KEY_P;
+    private boolean stopKeyMouse = false;
     private String dedicatedToggleKey = "V";
     private int dedicatedToggleKeyCode = InputConstants.KEY_V;
+    private boolean dedicatedToggleKeyMouse = false;
     private String configKey = "O";
     private int configKeyCode = InputConstants.KEY_O;
+    private boolean configKeyMouse = false;
 
     private String activeModelId = "vosk-model-small-en-us-0.15";
     private String speechLanguage = "en-US";
@@ -40,6 +44,7 @@ public class VoiceToTextConfig {
     private String hudPosition = "BOTTOM_RIGHT";
     // Voice Interface Layout: Layout 2 (Transparent Floating Dots & Live Chat Overlay) is the only layout
     private String interfaceLayout = "LAYOUT_2";
+    private String outputScript = "ROMAN_HINDI";
 
     public VoiceToTextConfig() {
     }
@@ -75,25 +80,53 @@ public class VoiceToTextConfig {
         }
 
         // Validate keybinds
-        if (activationKey == null || activationKey.trim().isEmpty()) {
+        // Safe migration for legacy numeric key codes / malformed translation identifiers
+        if ("key.keyboard.23".equalsIgnoreCase(activationKey) || "23".equals(activationKey) || "key.keyboard.84".equalsIgnoreCase(activationKey) || "84".equals(activationKey) || (!activationKeyMouse && activationKeyCode == 84)) {
+            activationKeyCode = InputConstants.KEY_T;
+            activationKey = "T";
+            activationKeyMouse = false;
+        }
+        if ("key.keyboard.25".equalsIgnoreCase(dedicatedToggleKey) || "25".equals(dedicatedToggleKey) || "key.keyboard.86".equalsIgnoreCase(dedicatedToggleKey) || "86".equals(dedicatedToggleKey) || (!dedicatedToggleKeyMouse && dedicatedToggleKeyCode == 86)) {
+            dedicatedToggleKeyCode = InputConstants.KEY_V;
+            dedicatedToggleKey = "V";
+            dedicatedToggleKeyMouse = false;
+        }
+        if ("key.keyboard.18".equalsIgnoreCase(configKey) || "18".equals(configKey) || "key.keyboard.79".equalsIgnoreCase(configKey) || "79".equals(configKey) || (!configKeyMouse && configKeyCode == 79)) {
+            configKeyCode = InputConstants.KEY_O;
+            configKey = "O";
+            configKeyMouse = false;
+        }
+        if ("key.keyboard.19".equalsIgnoreCase(stopKey) || "19".equals(stopKey) || "key.keyboard.80".equalsIgnoreCase(stopKey) || "80".equals(stopKey) || (!stopKeyMouse && stopKeyCode == 80)) {
+            stopKeyCode = InputConstants.KEY_P;
+            stopKey = "P";
+            stopKeyMouse = false;
+        }
+
+        // Clean any raw key. prefix if present
+        activationKey = cleanKeyIdentifier(activationKey, activationKeyMouse);
+        dedicatedToggleKey = cleanKeyIdentifier(dedicatedToggleKey, dedicatedToggleKeyMouse);
+        stopKey = cleanKeyIdentifier(stopKey, stopKeyMouse);
+        configKey = cleanKeyIdentifier(configKey, configKeyMouse);
+
+        if (activationKey == null || activationKey.trim().isEmpty() || "UNKNOWN".equalsIgnoreCase(activationKey.trim())) {
             activationKey = "T";
         }
         if (activationKeyCode <= 0) {
             activationKeyCode = InputConstants.KEY_T;
         }
-        if (stopKey == null || stopKey.trim().isEmpty()) {
+        if (stopKey == null || stopKey.trim().isEmpty() || "UNKNOWN".equalsIgnoreCase(stopKey.trim())) {
             stopKey = "P";
         }
         if (stopKeyCode <= 0) {
             stopKeyCode = InputConstants.KEY_P;
         }
-        if (dedicatedToggleKey == null || dedicatedToggleKey.trim().isEmpty()) {
+        if (dedicatedToggleKey == null || dedicatedToggleKey.trim().isEmpty() || "UNKNOWN".equalsIgnoreCase(dedicatedToggleKey.trim())) {
             dedicatedToggleKey = "V";
         }
         if (dedicatedToggleKeyCode <= 0) {
             dedicatedToggleKeyCode = InputConstants.KEY_V;
         }
-        if (configKey == null || configKey.trim().isEmpty()) {
+        if (configKey == null || configKey.trim().isEmpty() || "UNKNOWN".equalsIgnoreCase(configKey.trim())) {
             configKey = "O";
         }
         if (configKeyCode <= 0) {
@@ -110,6 +143,18 @@ public class VoiceToTextConfig {
         if (hudPosition == null || hudPosition.trim().isEmpty()) {
             hudPosition = "BOTTOM_RIGHT";
         }
+
+        if (outputScript == null || (!"ROMAN_HINDI".equalsIgnoreCase(outputScript) && !"DEVANAGARI".equalsIgnoreCase(outputScript) && !"AUTO".equalsIgnoreCase(outputScript))) {
+            outputScript = "ROMAN_HINDI";
+        }
+    }
+
+    public String getOutputScript() {
+        return outputScript;
+    }
+
+    public void setOutputScript(String outputScript) {
+        this.outputScript = outputScript != null ? outputScript : "ROMAN_HINDI";
     }
 
     public String getRecordingMode() {
@@ -299,5 +344,70 @@ public class VoiceToTextConfig {
         } else {
             this.interfaceLayout = interfaceLayout;
         }
+    }
+
+    public boolean isActivationKeyMouse() {
+        return activationKeyMouse;
+    }
+
+    public void setActivationKeyMouse(boolean activationKeyMouse) {
+        this.activationKeyMouse = activationKeyMouse;
+    }
+
+    public boolean isStopKeyMouse() {
+        return stopKeyMouse;
+    }
+
+    public void setStopKeyMouse(boolean stopKeyMouse) {
+        this.stopKeyMouse = stopKeyMouse;
+    }
+
+    public boolean isDedicatedToggleKeyMouse() {
+        return dedicatedToggleKeyMouse;
+    }
+
+    public void setDedicatedToggleKeyMouse(boolean dedicatedToggleKeyMouse) {
+        this.dedicatedToggleKeyMouse = dedicatedToggleKeyMouse;
+    }
+
+    public boolean isConfigKeyMouse() {
+        return configKeyMouse;
+    }
+
+    public void setConfigKeyMouse(boolean configKeyMouse) {
+        this.configKeyMouse = configKeyMouse;
+    }
+
+    private static String cleanKeyIdentifier(String key, boolean isMouse) {
+        if (key == null || key.trim().isEmpty() || "UNKNOWN".equalsIgnoreCase(key.trim())) return null;
+        String s = key.trim();
+        if (s.toLowerCase().startsWith("key.keyboard.")) {
+            String suffix = s.substring("key.keyboard.".length());
+            return switch (suffix.toLowerCase()) {
+                case "23", "84", "t" -> "T";
+                case "25", "86", "v" -> "V";
+                case "18", "79", "o" -> "O";
+                case "19", "80", "p" -> "P";
+                default -> suffix.toUpperCase();
+            };
+        }
+        if (s.toLowerCase().startsWith("key.mouse.")) {
+            String suffix = s.substring("key.mouse.".length());
+            return switch (suffix.toLowerCase()) {
+                case "left", "1" -> "Left Button";
+                case "right", "3" -> "Right Button";
+                case "middle", "2" -> "Middle Button";
+                case "4" -> "Mouse 4";
+                case "5" -> "Mouse 5";
+                case "6" -> "Mouse 6";
+                case "7" -> "Mouse 7";
+                case "8" -> "Mouse 8";
+                default -> "Mouse " + suffix;
+            };
+        }
+        if (s.toLowerCase().startsWith("key.")) {
+            return s.substring(4).toUpperCase();
+        }
+        return s;
     }
 }

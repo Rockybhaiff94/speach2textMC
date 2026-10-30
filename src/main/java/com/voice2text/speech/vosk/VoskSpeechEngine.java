@@ -2,6 +2,7 @@ package com.voice2text.speech.vosk;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.voice2text.model.ModelManager;
 import com.voice2text.speech.EngineState;
 import com.voice2text.speech.RecognitionListener;
 import com.voice2text.speech.RecognitionResult;
@@ -47,6 +48,9 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
             if (!modelDir.exists() || !modelDir.isDirectory()) {
                 throw new IOException("Speech model directory does not exist: " + modelPath);
             }
+
+            // Auto-resolve nested directory if present (e.g. unzipped root directory)
+            modelDir = ModelManager.resolveModelDirectory(modelDir);
 
             try {
                 close();

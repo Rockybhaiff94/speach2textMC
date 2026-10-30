@@ -1,15 +1,26 @@
 package com.voice2text.model;
 
 /**
- * Metadata descriptor for an offline Vosk speech recognition model.
+ * Metadata descriptor for an offline speech recognition model.
  * Supports primary official download endpoints, verified alternate release mirrors,
- * official MD5 checksums from Vosk model-list, and verified SHA-256 hashes.
+ * official MD5 checksums, verified SHA-256 hashes, hardware recommendations,
+ * Hinglish compatibility, output script options, and runtime classification.
  */
 public class SpeechModelInfo {
 
     private final String id;
     private final String languageCode;
     private final String displayName;
+    private final ModelFamily family;
+    private final String category;
+    private final String shortDescription;
+    private final String supportedLanguages;
+    private final String hinglishSupport;
+    private final String outputScript;
+    private final String hardwareRequirements;
+    private final String runtimeCompatibility;
+    private final String quantization;
+    private final String supportStatus;
     private final String primaryDownloadUrl;
     private final String alternateDownloadUrl;
     private final long downloadSizeBytes;
@@ -22,6 +33,16 @@ public class SpeechModelInfo {
     public SpeechModelInfo(String id,
                            String languageCode,
                            String displayName,
+                           ModelFamily family,
+                           String category,
+                           String shortDescription,
+                           String supportedLanguages,
+                           String hinglishSupport,
+                           String outputScript,
+                           String hardwareRequirements,
+                           String runtimeCompatibility,
+                           String quantization,
+                           String supportStatus,
                            String primaryDownloadUrl,
                            String alternateDownloadUrl,
                            long downloadSizeBytes,
@@ -33,6 +54,16 @@ public class SpeechModelInfo {
         this.id = id;
         this.languageCode = languageCode;
         this.displayName = displayName;
+        this.family = family != null ? family : ModelFamily.VOSK;
+        this.category = category != null ? category : "General";
+        this.shortDescription = shortDescription != null ? shortDescription : "";
+        this.supportedLanguages = supportedLanguages != null ? supportedLanguages : languageCode;
+        this.hinglishSupport = hinglishSupport != null ? hinglishSupport : "None";
+        this.outputScript = outputScript != null ? outputScript : "Latin";
+        this.hardwareRequirements = hardwareRequirements != null ? hardwareRequirements : "500 MB RAM";
+        this.runtimeCompatibility = runtimeCompatibility != null ? runtimeCompatibility : "Offline Native";
+        this.quantization = quantization != null ? quantization : "Standard";
+        this.supportStatus = supportStatus != null ? supportStatus : "Supported";
         this.primaryDownloadUrl = primaryDownloadUrl;
         this.alternateDownloadUrl = alternateDownloadUrl != null ? alternateDownloadUrl : "";
         this.downloadSizeBytes = downloadSizeBytes;
@@ -41,6 +72,26 @@ public class SpeechModelInfo {
         this.alternateSha256 = alternateSha256 != null ? alternateSha256.toLowerCase().trim() : "";
         this.md5Checksum = md5Checksum != null ? md5Checksum.toLowerCase().trim() : "";
         this.license = license != null ? license : "Apache-2.0";
+    }
+
+    public SpeechModelInfo(String id,
+                           String languageCode,
+                           String displayName,
+                           String primaryDownloadUrl,
+                           String alternateDownloadUrl,
+                           long downloadSizeBytes,
+                           long uncompressedSizeBytes,
+                           String primarySha256,
+                           String alternateSha256,
+                           String md5Checksum,
+                           String license) {
+        this(id, languageCode, displayName, ModelFamily.VOSK, "Vosk Offline",
+             "Offline Vosk speech model.", languageCode,
+             (id.contains("hi") || id.contains("hinglish") || id.contains("in")) ? "Supported" : "None",
+             (id.contains("hi") || id.contains("hinglish")) ? "Roman Hindi & Devanagari" : "Latin",
+             "500 MB RAM", "Vosk Native JNI (Offline)", "Standard", "Supported",
+             primaryDownloadUrl, alternateDownloadUrl, downloadSizeBytes, uncompressedSizeBytes,
+             primarySha256, alternateSha256, md5Checksum, license);
     }
 
     public SpeechModelInfo(String id,
@@ -76,6 +127,46 @@ public class SpeechModelInfo {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public ModelFamily getFamily() {
+        return family;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public String getSupportedLanguages() {
+        return supportedLanguages;
+    }
+
+    public String getHinglishSupport() {
+        return hinglishSupport;
+    }
+
+    public String getOutputScript() {
+        return outputScript;
+    }
+
+    public String getHardwareRequirements() {
+        return hardwareRequirements;
+    }
+
+    public String getRuntimeCompatibility() {
+        return runtimeCompatibility;
+    }
+
+    public String getQuantization() {
+        return quantization;
+    }
+
+    public String getSupportStatus() {
+        return supportStatus;
     }
 
     public String getPrimaryDownloadUrl() {
@@ -118,14 +209,12 @@ public class SpeechModelInfo {
      * Verifies computed SHA-256 and/or MD5 hashes against registered expected values.
      */
     public boolean verifyIntegrity(String computedSha256, String computedMd5, boolean isAlternateSource) {
-        // 1. Verify MD5 if available
-        if (md5Checksum != null && !md5Checksum.isEmpty() && computedMd5 != null) {
+        if (!isAlternateSource && md5Checksum != null && !md5Checksum.isEmpty() && computedMd5 != null) {
             if (!md5Checksum.equalsIgnoreCase(computedMd5.trim())) {
                 return false;
             }
         }
 
-        // 2. Verify SHA-256 if available
         String expectedSha256 = isAlternateSource ? alternateSha256 : primarySha256;
         if (expectedSha256 == null || expectedSha256.isEmpty()) {
             expectedSha256 = primarySha256.isEmpty() ? alternateSha256 : primarySha256;
@@ -159,12 +248,20 @@ public class SpeechModelInfo {
     }
 
     public String getFormattedDownloadSize() {
-        double mb = (double) downloadSizeBytes / (1024 * 1024);
+        if (downloadSizeBytes >= 1024L * 1024L * 1024L) {
+            double gb = (double) downloadSizeBytes / (1024.0 * 1024.0 * 1024.0);
+            return String.format("%.2f GB", gb);
+        }
+        double mb = (double) downloadSizeBytes / (1024.0 * 1024.0);
         return String.format("%.1f MB", mb);
     }
 
     public String getFormattedUncompressedSize() {
-        double mb = (double) uncompressedSizeBytes / (1024 * 1024);
+        if (uncompressedSizeBytes >= 1024L * 1024L * 1024L) {
+            double gb = (double) uncompressedSizeBytes / (1024.0 * 1024.0 * 1024.0);
+            return String.format("%.2f GB", gb);
+        }
+        double mb = (double) uncompressedSizeBytes / (1024.0 * 1024.0);
         return String.format("%.1f MB", mb);
     }
 

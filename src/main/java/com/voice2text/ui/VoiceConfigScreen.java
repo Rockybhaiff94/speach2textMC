@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -315,7 +316,7 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal(isInstalled ? "Model installed. Click to ensure active." : "Download offline neural speech model from verified official repositories.")))
          .bounds(centerX + 4, startY + (rowSpacing * 5), btnW, btnH).build());
 
-        // --- ROW 7: Reset Keybinds (Left) & Reset Learned Corrections (Right) ---
+        // --- ROW 7: Reset Keybinds (Left) & Output Script (Right) ---
         addRenderableWidget(Button.builder(
                 Component.literal("§7Reset Keybinds"),
                 button -> {
@@ -330,21 +331,34 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal("Restores default key mappings: T for activation, V for Hold-to-Talk, P for stop & draft, O for settings.")))
          .bounds(centerX - btnW - 4, startY + (rowSpacing * 6), btnW, btnH).build());
 
-        VoiceToTextMod currentMod = VoiceToTextMod.getInstance();
-        int learnedCount = (currentMod != null && currentMod.getController() != null && currentMod.getController().getLearningStore() != null)
-                ? currentMod.getController().getLearningStore().size() : 0;
-        String learnedText = "Learned Words: §b" + learnedCount + (learnedCount > 0 ? " §c(Reset)" : "");
+        boolean isRoman = "ROMAN_HINDI".equalsIgnoreCase(config.getOutputScript());
+        String scriptLabel = "Output: §b" + (isRoman ? "Roman Hindi (Hinglish)" : "Devanagari Script");
         addRenderableWidget(Button.builder(
-                Component.literal(learnedText),
+                Component.literal(scriptLabel),
                 button -> {
-                    if (currentMod != null && currentMod.getController() != null && currentMod.getController().getLearningStore() != null) {
-                        currentMod.getController().getLearningStore().reset();
-                        downloadStatus = "§aLearned corrections have been reset.";
+                    if ("ROMAN_HINDI".equalsIgnoreCase(config.getOutputScript())) {
+                        config.setOutputScript("DEVANAGARI");
+                    } else {
+                        config.setOutputScript("ROMAN_HINDI");
                     }
                     rebuildWidgets();
                 }
-        ).tooltip(Tooltip.create(Component.literal("Number of user-confirmed speech corrections learned. Click to reset learned corrections without affecting settings.")))
+        ).tooltip(Tooltip.create(Component.literal("Controls Hindi output script. Roman Hindi writes spoken Hindi in English letters, preserving English words without forcing Devanagari.")))
          .bounds(centerX + 4, startY + (rowSpacing * 6), btnW, btnH).build());
+
+        // --- ROW 8: Language & Model Library (Centered at the very bottom of options) ---
+        int libraryW = 210;
+        int libraryH = 22;
+        int libraryY = startY + (rowSpacing * 7) + 2;
+        addRenderableWidget(Button.builder(
+                Component.literal("🌐 Language & Model Library ➔"),
+                button -> {
+                    if (this.minecraft != null) {
+                        this.minecraft.gui.setScreen(new ModelLibraryScreen(this));
+                    }
+                }
+        ).tooltip(Tooltip.create(Component.literal("Open the dedicated Language & Model Library to discover, download, and activate Whisper, Hinglish, Vosk, and Indic models.")))
+         .bounds(centerX - (libraryW / 2), libraryY, libraryW, libraryH).build());
 
         // --- BOTTOM: Done Button ---
         addRenderableWidget(Button.builder(
@@ -369,12 +383,13 @@ public class VoiceConfigScreen extends Screen {
                 VoiceToTextMod mod = VoiceToTextMod.getInstance();
                 KeybindManager km = mod != null ? mod.getKeybindManager() : null;
                 if (km != null) {
-                    String keyName = KeybindManager.resolveKeyName(key);
+                    InputConstants.Key keyObj = InputConstants.getKey(event);
+                    String keyName = KeybindManager.resolveKeyName(keyObj != null ? keyObj : KeybindManager.createKey(key));
                     switch (selectedKeybind) {
-                        case ACTIVATION -> km.setActivationKey(key, keyName);
-                        case STOP_DRAFT -> km.setStopKey(key, keyName);
-                        case TOGGLE -> km.setToggleKey(key, keyName);
-                        case CONFIG -> km.setConfigKey(key, keyName);
+                        case ACTIVATION -> km.setActivationKey(key, keyName, false);
+                        case STOP_DRAFT -> km.setStopKey(key, keyName, false);
+                        case TOGGLE -> km.setToggleKey(key, keyName, false);
+                        case CONFIG -> km.setConfigKey(key, keyName, false);
                         case NONE -> {}
                     }
                     mod.getConfigManager().save(config);
@@ -386,6 +401,32 @@ public class VoiceConfigScreen extends Screen {
         }
 
         return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean isDoubleOrTripleClick) {
+        if (selectedKeybind != SelectedKeybind.NONE) {
+            int button = event.button();
+            VoiceToTextMod mod = VoiceToTextMod.getInstance();
+            KeybindManager km = mod != null ? mod.getKeybindManager() : null;
+            if (km != null) {
+                InputConstants.Key mouseKey = KeybindManager.createMouseKey(button);
+                String keyName = KeybindManager.resolveKeyName(mouseKey);
+                switch (selectedKeybind) {
+                    case ACTIVATION -> km.setActivationKey(button, keyName, true);
+                    case STOP_DRAFT -> km.setStopKey(button, keyName, true);
+                    case TOGGLE -> km.setToggleKey(button, keyName, true);
+                    case CONFIG -> km.setConfigKey(button, keyName, true);
+                    case NONE -> {}
+                }
+                mod.getConfigManager().save(config);
+            }
+            selectedKeybind = SelectedKeybind.NONE;
+            rebuildWidgets();
+            return true;
+        }
+
+        return super.mouseClicked(event, isDoubleOrTripleClick);
     }
 
     private void startModelDownload() {
@@ -440,7 +481,7 @@ public class VoiceConfigScreen extends Screen {
         int centerX = this.width / 2;
 
         // Header Title
-        extractor.centeredText(this.font, "§lVoice2Text Settings", centerX, 6, 0xFFFFFF);
+        extractor.centeredText(this.font, "§lVoice2Text Settings", centerX, 6, 0xFFFFFFFF);
         extractor.centeredText(this.font, "§7Real-Time Offline Speech-to-Text for Minecraft", centerX, 16, 0x90A4B0BE);
 
         // Display Keybind Conflicts or Duplicate Bindings
@@ -452,7 +493,7 @@ public class VoiceConfigScreen extends Screen {
         int footerY = this.height - 44;
 
         if (selectedKeybind != SelectedKeybind.NONE) {
-            extractor.centeredText(this.font, "§e▶ Press any key to assign keybind, or ESC to cancel ◀", centerX, footerY, 0xFFD700);
+            extractor.centeredText(this.font, "§e▶ Press any key to assign keybind, or ESC to cancel ◀", centerX, footerY, 0xFFFFD700);
         } else if (isDownloading) {
             String progressText;
             if (downloadPercent >= 0) {
@@ -462,9 +503,9 @@ public class VoiceConfigScreen extends Screen {
             } else {
                 progressText = downloadStatus;
             }
-            extractor.centeredText(this.font, progressText, centerX, footerY, 0xFFFFFF);
+            extractor.centeredText(this.font, progressText, centerX, footerY, 0xFFFFFFFF);
         } else if (!downloadStatus.isEmpty()) {
-            extractor.centeredText(this.font, downloadStatus, centerX, footerY, 0xFFFFFF);
+            extractor.centeredText(this.font, downloadStatus, centerX, footerY, 0xFFFFFFFF);
 
             // If error, show manual fallback instructions
             if (downloadStatus.contains("failed") || downloadStatus.contains("Error")) {
@@ -476,8 +517,8 @@ public class VoiceConfigScreen extends Screen {
         } else if (!warnings.isEmpty()) {
             // Display first conflict warning prominently
             String firstWarn = warnings.get(0);
-            extractor.centeredText(this.font, "§e⚠ " + firstWarn, centerX, footerY - 4, 0xFFFF55);
-            extractor.centeredText(this.font, "§7Pressing key will trigger Voice2Text. You can remap in Controls.", centerX, footerY + 6, 0xAAAAAA);
+            extractor.centeredText(this.font, "§e⚠ " + firstWarn, centerX, footerY - 4, 0xFFFFFF55);
+            extractor.centeredText(this.font, "§7Pressing key will trigger Voice2Text. You can remap in Controls.", centerX, footerY + 6, 0xFFAAAAAA);
         } else {
             extractor.centeredText(this.font, "§7Keys configurable in Options → Controls → Key Binds → Voice2Text", centerX, footerY, 0x8090A0B0);
         }

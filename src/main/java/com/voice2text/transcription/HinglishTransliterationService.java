@@ -3,7 +3,9 @@ package com.voice2text.transcription;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,6 +34,17 @@ public class HinglishTransliterationService {
 
     static {
         // --- 1. Gaming, Minecraft & Technical Loanwords ---
+        LOANWORDS_MAP.put("पीसी", "PC");
+        LOANWORDS_MAP.put("न्यू", "new");
+        LOANWORDS_MAP.put("गेमिंग", "gaming");
+        LOANWORDS_MAP.put("कंप्यूटर", "computer");
+        LOANWORDS_MAP.put("लैपटॉप", "laptop");
+        LOANWORDS_MAP.put("ग्राफिक्स", "graphics");
+        LOANWORDS_MAP.put("कार्ड", "card");
+        LOANWORDS_MAP.put("सीपीयू", "CPU");
+        LOANWORDS_MAP.put("जीपीयू", "GPU");
+        LOANWORDS_MAP.put("रैम", "RAM");
+        LOANWORDS_MAP.put("एसएसडी", "SSD");
         LOANWORDS_MAP.put("माइनक्राफ्ट", "minecraft");
         LOANWORDS_MAP.put("माइनक्राफ़्ट", "minecraft");
         LOANWORDS_MAP.put("माइनक्राफ़्ट", "minecraft");
@@ -156,8 +169,78 @@ public class HinglishTransliterationService {
         LOANWORDS_MAP.put("अपडेट", "update");
         LOANWORDS_MAP.put("लेवल", "level");
 
+        // --- Conversational English Words (Preserved accurately in Hinglish) ---
+        LOANWORDS_MAP.put("आई", "I");
+        LOANWORDS_MAP.put("आइ", "I");
+        LOANWORDS_MAP.put("एम", "am");
+        LOANWORDS_MAP.put("ऍम", "am");
+        LOANWORDS_MAP.put("ऐम", "am");
+        LOANWORDS_MAP.put("इज़", "is");
+        LOANWORDS_MAP.put("इज", "is");
+        LOANWORDS_MAP.put("आर", "are");
+        LOANWORDS_MAP.put("वाज", "was");
+        LOANWORDS_MAP.put("वाज़", "was");
+        LOANWORDS_MAP.put("वाॅज", "was");
+        LOANWORDS_MAP.put("वर", "were");
+        LOANWORDS_MAP.put("यू", "you");
+        LOANWORDS_MAP.put("यु", "you");
+        LOANWORDS_MAP.put("योर", "your");
+        LOANWORDS_MAP.put("योअर", "your");
+        LOANWORDS_MAP.put("माई", "my");
+        LOANWORDS_MAP.put("माइ", "my");
+        LOANWORDS_MAP.put("मी", "me");
+        LOANWORDS_MAP.put("ही", "he");
+        LOANWORDS_MAP.put("शी", "she");
+        LOANWORDS_MAP.put("इट", "it");
+        LOANWORDS_MAP.put("वी", "we");
+        LOANWORDS_MAP.put("दे", "they");
+        LOANWORDS_MAP.put("द", "the");
+        LOANWORDS_MAP.put("दी", "the");
+        LOANWORDS_MAP.put("दिस", "this");
+        LOANWORDS_MAP.put("दैट", "that");
+        LOANWORDS_MAP.put("टू", "to");
+        LOANWORDS_MAP.put("टु", "to");
+        LOANWORDS_MAP.put("फॉर", "for");
+        LOANWORDS_MAP.put("फ़ॉर", "for");
+        LOANWORDS_MAP.put("विद", "with");
+        LOANWORDS_MAP.put("फ्रॉम", "from");
+        LOANWORDS_MAP.put("बट", "but");
+        LOANWORDS_MAP.put("सो", "so");
+        LOANWORDS_MAP.put("इफ", "if");
+        LOANWORDS_MAP.put("इफ़", "if");
+        LOANWORDS_MAP.put("देन", "then");
+        LOANWORDS_MAP.put("राइट", "right");
+        LOANWORDS_MAP.put("नाउ", "now");
+        LOANWORDS_MAP.put("नाव", "now");
+        LOANWORDS_MAP.put("टुडे", "Today");
+        LOANWORDS_MAP.put("टुमॉरो", "tomorrow");
+        LOANWORDS_MAP.put("टुमारो", "tomorrow");
+        LOANWORDS_MAP.put("यस्टरडे", "yesterday");
+        LOANWORDS_MAP.put("टॉकिंग", "talking");
+        LOANWORDS_MAP.put("टाकिंग", "talking");
+        LOANWORDS_MAP.put("टॉक", "talk");
+        LOANWORDS_MAP.put("टाक", "talk");
+        LOANWORDS_MAP.put("वर्किंग", "working");
+        LOANWORDS_MAP.put("प्लेइंग", "playing");
+        LOANWORDS_MAP.put("गोइंग", "going");
+        LOANWORDS_MAP.put("डूइंग", "doing");
+        LOANWORDS_MAP.put("कमिंग", "coming");
+        LOANWORDS_MAP.put("कैन", "can");
+        LOANWORDS_MAP.put("कुड", "could");
+        LOANWORDS_MAP.put("विल", "will");
+        LOANWORDS_MAP.put("वुड", "would");
+        LOANWORDS_MAP.put("वांट", "want");
+        LOANWORDS_MAP.put("थिंक", "think");
+        LOANWORDS_MAP.put("आशीष", "Ashish");
+
         // --- 2. Common Conversational Hindi Vocabulary ---
         COMMON_HINDI_MAP.put("भाई", "bhai");
+        COMMON_HINDI_MAP.put("मुझे", "mujhe");
+        COMMON_HINDI_MAP.put("एक", "ek");
+        COMMON_HINDI_MAP.put("बनाना", "banana");
+        COMMON_HINDI_MAP.put("बना", "bana");
+        COMMON_HINDI_MAP.put("बनाओ", "banao");
+        COMMON_HINDI_MAP.put("बनाने", "banane");
         COMMON_HINDI_MAP.put("यार", "yaar");
         COMMON_HINDI_MAP.put("में", "mein");
         COMMON_HINDI_MAP.put("मे", "mein");
@@ -411,22 +494,30 @@ public class HinglishTransliterationService {
         }
 
         Matcher matcher = TOKEN_PATTERN.matcher(input);
+        List<TokenMatch> tokens = new ArrayList<>();
+        while (matcher.find()) {
+            tokens.add(new TokenMatch(matcher.group(1), matcher.start(), matcher.end()));
+        }
+
         StringBuilder result = new StringBuilder();
         int lastEnd = 0;
 
-        while (matcher.find()) {
-            if (matcher.start() > lastEnd) {
-                result.append(input, lastEnd, matcher.start());
+        for (int i = 0; i < tokens.size(); i++) {
+            TokenMatch tm = tokens.get(i);
+            if (tm.start > lastEnd) {
+                result.append(input, lastEnd, tm.start);
             }
 
-            String token = matcher.group(1);
+            String token = tm.token;
             if (isDevanagariWord(token)) {
-                result.append(transliterateWord(token));
+                String prevDev = findNeighborWord(tokens, i, -1);
+                String nextDev = findNeighborWord(tokens, i, 1);
+                result.append(transliterateWordWithContext(token, prevDev, nextDev));
             } else {
                 result.append(token);
             }
 
-            lastEnd = matcher.end();
+            lastEnd = tm.end;
         }
 
         if (lastEnd < input.length()) {
@@ -434,6 +525,30 @@ public class HinglishTransliterationService {
         }
 
         return result.toString();
+    }
+
+    private static class TokenMatch {
+        final String token;
+        final int start;
+        final int end;
+
+        TokenMatch(String token, int start, int end) {
+            this.token = token;
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    private static String findNeighborWord(List<TokenMatch> tokens, int currentIndex, int direction) {
+        int idx = currentIndex + direction;
+        while (idx >= 0 && idx < tokens.size()) {
+            String t = tokens.get(idx).token;
+            if (t.matches("^[\\u0900-\\u097Fa-zA-Z]+$")) {
+                return t;
+            }
+            idx += direction;
+        }
+        return null;
     }
 
     public static boolean containsDevanagari(String text) {
@@ -504,9 +619,10 @@ public class HinglishTransliterationService {
 
     /**
      * Transliterates a single Devanagari word using loanword matching,
-     * common Hindi vocabulary matching, or phonetic rule-based transliteration.
+     * common Hindi vocabulary matching, contextual lookahead/lookbehind,
+     * or phonetic rule-based transliteration.
      */
-    public static String transliterateWord(String word) {
+    public static String transliterateWordWithContext(String word, String prevWord, String nextWord) {
         if (word == null || word.isEmpty()) return "";
 
         // Purna Viram and Deergh Viram
@@ -517,20 +633,43 @@ public class HinglishTransliterationService {
         // Normalize Unicode composed forms (NFC) so decomposed nuktas match dictionary
         String normalized = Normalizer.normalize(word, Normalizer.Form.NFC);
 
-        // 1. Direct loanword match
+        // 1. Contextual handling of "आई" / "आइ" -> "I" vs "aayi"
+        if ("आई".equals(normalized) || "आइ".equals(normalized)) {
+            if (nextWord != null && (nextWord.equals("थी") || nextWord.equals("हुई")
+                    || (prevWord != null && (prevWord.equals("वो") || prevWord.equals("वह"))))) {
+                return "aayi";
+            }
+            return "I";
+        }
+
+        // 2. Contextual handling of "एंड" / "ऐंड" -> "End" vs "and"
+        if ("एंड".equals(normalized) || "ऐंड".equals(normalized)) {
+            if (nextWord != null && (nextWord.equals("ड्रैगन") || nextWord.equals("पोर्टल")
+                    || "dragon".equalsIgnoreCase(nextWord) || "portal".equalsIgnoreCase(nextWord)
+                    || (prevWord != null && (prevWord.equals("द") || "the".equalsIgnoreCase(prevWord))))) {
+                return "End";
+            }
+            return "and";
+        }
+
+        // 3. Direct loanword match
         String loan = LOANWORDS_MAP.get(normalized);
         if (loan != null) {
             return loan;
         }
 
-        // 2. Direct common Hindi vocabulary match
+        // 4. Direct common Hindi vocabulary match
         String common = COMMON_HINDI_MAP.get(normalized);
         if (common != null) {
             return common;
         }
 
-        // 3. Fallback: Rule-based phonetic transliteration with schwa deletion
+        // 5. Fallback: Rule-based phonetic transliteration with schwa deletion
         return phoneticTransliterate(normalized);
+    }
+
+    public static String transliterateWord(String word) {
+        return transliterateWordWithContext(word, null, null);
     }
 
     /**
