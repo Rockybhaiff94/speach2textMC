@@ -548,27 +548,12 @@ public class ModelManager {
     }
 
     public File getModelDir(String modelId) {
-        if ("vosk-model-small-hinglish".equals(modelId)
-                || "whisper-hindi2hinglish-apex".equals(modelId)
-                || "whisper-hindi2hinglish-swift".equals(modelId)
-                || "shruti-asr-hi".equals(modelId)
-                || "indicconformer-hi".equals(modelId)) {
-            File directDir = new File(modelsBaseDir, modelId);
-            if (isValidModelDir(directDir)) {
-                return resolveModelDirectory(directDir);
-            }
-            File hinglishDir = new File(modelsBaseDir, "vosk-model-small-hinglish");
-            if (isValidModelDir(hinglishDir)) {
-                return resolveModelDirectory(hinglishDir);
-            }
-            File hiDir = new File(modelsBaseDir, "vosk-model-small-hi-0.22");
-            if (isValidModelDir(hiDir)) {
-                return resolveModelDirectory(hiDir);
-            }
-            return directDir;
+        String id = (modelId != null && !modelId.trim().isEmpty()) ? modelId.trim() : DEFAULT_MODEL_ID;
+        File directDir = new File(modelsBaseDir, id);
+        if (isValidModelDir(directDir)) {
+            return resolveModelDirectory(directDir);
         }
-        File base = new File(modelsBaseDir, modelId);
-        return isValidModelDir(base) ? resolveModelDirectory(base) : base;
+        return directDir;
     }
 
     /**
@@ -601,7 +586,10 @@ public class ModelManager {
      * model files.
      */
     public boolean isModelInstalled(String modelId) {
-        File dir = getModelDir(modelId);
+        if (modelId == null || modelId.trim().isEmpty()) {
+            return false;
+        }
+        File dir = new File(modelsBaseDir, modelId.trim());
         return isValidModelDir(dir);
     }
 
@@ -705,7 +693,7 @@ public class ModelManager {
         }
 
         String modelId = info.getId();
-        File targetDir = getModelDir(modelId);
+        File targetDir = new File(modelsBaseDir, modelId);
 
         // Check if valid installation already exists
         if (isValidModelDir(targetDir)) {
@@ -1010,7 +998,10 @@ public class ModelManager {
     }
 
     public boolean deleteModel(String modelId) {
-        File dir = getModelDir(modelId);
+        if (modelId == null || modelId.trim().isEmpty()) {
+            return false;
+        }
+        File dir = new File(modelsBaseDir, modelId.trim());
         if (dir.exists()) {
             boolean deleted = deleteRecursively(dir);
             if (deleted) {

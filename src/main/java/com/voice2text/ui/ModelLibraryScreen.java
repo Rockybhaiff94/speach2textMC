@@ -91,12 +91,16 @@ public class ModelLibraryScreen extends Screen {
         return (this.height - getContainerHeight()) / 2;
     }
 
+    private int getHeaderHeight() {
+        return 82;
+    }
+
     private int getListTop() {
-        return getContainerY() + 78;
+        return getContainerY() + getHeaderHeight() + 4;
     }
 
     private int getListBottom() {
-        return getContainerY() + getContainerHeight() - 32;
+        return getContainerY() + getContainerHeight() - 30;
     }
 
     @Override
@@ -107,10 +111,11 @@ public class ModelLibraryScreen extends Screen {
         int containerY = getContainerY();
 
         // 1. Search Box
-        int searchW = containerW - 24;
+        int searchW = containerW - 32;
+        int searchX = containerX + 16;
         int searchY = containerY + 34;
-        this.searchBox = new EditBox(this.font, containerX + 12, searchY, searchW, 18, Component.literal("Search"));
-        this.searchBox.setHint(Component.literal("§7Search by name, language, or feature (e.g. Whisper, Hinglish)..."));
+        this.searchBox = new EditBox(this.font, searchX, searchY, searchW, 18, Component.literal("Search"));
+        this.searchBox.setHint(Component.literal("§8🔍 §7Search by name, language, or feature (e.g. Whisper, Hinglish)..."));
         this.searchBox.setValue(searchQuery);
         this.searchBox.setResponder(val -> {
             this.searchQuery = val;
@@ -118,35 +123,12 @@ public class ModelLibraryScreen extends Screen {
         });
         addRenderableWidget(this.searchBox);
 
-        // 2. Category Filter Buttons
-        int catY = searchY + 22;
-        int catBtnH = 16;
-        int totalSpacing = 4 * 4;
-        int catBtnW = (containerW - 24 - totalSpacing) / 5;
-
-        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
-        for (int i = 0; i < categories.length; i++) {
-            String cat = categories[i];
-            boolean isSelected = activeCategory.equalsIgnoreCase(cat);
-            String label = isSelected ? "§a" + cat : "§7" + cat;
-            int btnX = containerX + 12 + (i * (catBtnW + 4));
-
-            addRenderableWidget(Button.builder(
-                    Component.literal(label),
-                    b -> {
-                        this.activeCategory = cat;
-                        updateFilter();
-                        rebuildWidgets();
-                    }
-            ).bounds(btnX, catY, catBtnW, catBtnH).build());
-        }
-
-        // 3. Bottom Footer Back Button
+        // 2. Bottom Footer Back Button
         int footerH = 28;
         int footerY = containerY + containerH - footerH;
         int backBtnW = 84;
         int backBtnH = 20;
-        int backBtnX = containerX + containerW - 12 - backBtnW;
+        int backBtnX = containerX + containerW - 16 - backBtnW;
         int backBtnY = footerY + 4;
 
         addRenderableWidget(Button.builder(
@@ -197,13 +179,13 @@ public class ModelLibraryScreen extends Screen {
             displayedModels.add(info);
         }
 
-        // Recompute max scroll
+        // Recompute max scroll with ample padding for the last card
         int listTop = getListTop();
         int listBottom = getListBottom();
         int listHeight = listBottom - listTop;
-        int cardHeight = 86;
-        int cardGap = 6;
-        int totalContentHeight = displayedModels.size() * (cardHeight + cardGap) + 10;
+        int cardHeight = 88;
+        int cardGap = 8;
+        int totalContentHeight = displayedModels.size() * (cardHeight + cardGap) + 16;
         this.maxScroll = Math.max(0, totalContentHeight - listHeight);
         if (this.scrollOffset > this.maxScroll) {
             this.scrollOffset = this.maxScroll;
@@ -348,15 +330,36 @@ public class ModelLibraryScreen extends Screen {
             return true;
         }
 
-        // 2. Card clicks inside scrollable region
-        int listTop = getListTop();
-        int listBottom = getListBottom();
         int containerW = getContainerWidth();
         int containerX = getContainerX();
+        int containerY = getContainerY();
 
-        int cardW = containerW - 24;
-        int cardX = containerX + 12;
-        int cardH = 86;
+        // 2. Category tab clicks
+        int catY = containerY + 34 + 23;
+        int catBtnH = 18;
+        int totalSpacing = 4 * 4;
+        int catBtnW = (containerW - 32 - totalSpacing) / 5;
+        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
+
+        if (mouseY >= catY && mouseY <= catY + catBtnH) {
+            for (int i = 0; i < categories.length; i++) {
+                int btnX = containerX + 16 + (i * (catBtnW + 4));
+                if (mouseX >= btnX && mouseX <= btnX + catBtnW) {
+                    this.activeCategory = categories[i];
+                    updateFilter();
+                    return true;
+                }
+            }
+        }
+
+        // 3. Card clicks inside scrollable region
+        int listTop = getListTop();
+        int listBottom = getListBottom();
+
+        int cardW = containerW - 32;
+        int cardX = containerX + 16;
+        int cardH = 88;
+        int cardGap = 8;
 
         if (mouseY >= listTop && mouseY <= listBottom && mouseX >= cardX && mouseX <= cardX + cardW) {
             int currentY = listTop - scrollOffset;
@@ -365,23 +368,24 @@ public class ModelLibraryScreen extends Screen {
                 if (mouseY >= currentY && mouseY <= currentY + cardH) {
                     this.selectedModelId = info.getId();
 
-                    int btnY = currentY + cardH - 22;
-                    int btnDetailsX = cardX + cardW - 208;
-                    int btnDownloadX = cardX + cardW - 150;
-                    int btnActivateX = cardX + cardW - 74;
+                    int btnY = currentY + cardH - 23;
+                    int btnH = 17;
+                    int btnDetailsX = cardX + cardW - 214;
+                    int btnDownloadX = cardX + cardW - 156;
+                    int btnActivateX = cardX + cardW - 80;
 
                     boolean isInstalled = modelManager != null && modelManager.isModelInstalled(info.getId());
                     boolean isActive = isInstalled && info.getId().equals(config.getActiveModelId());
                     boolean isDownloading = info.getId().equals(downloadingModelId);
 
                     // Details Button
-                    if (mouseX >= btnDetailsX && mouseX <= btnDetailsX + 54 && mouseY >= btnY && mouseY <= btnY + 18) {
+                    if (mouseX >= btnDetailsX && mouseX <= btnDetailsX + 54 && mouseY >= btnY && mouseY <= btnY + btnH) {
                         this.modalDetailsModel = info;
                         return true;
                     }
 
                     // Download / Cancel / Remove Button
-                    if (mouseX >= btnDownloadX && mouseX <= btnDownloadX + 72 && mouseY >= btnY && mouseY <= btnY + 18) {
+                    if (mouseX >= btnDownloadX && mouseX <= btnDownloadX + 72 && mouseY >= btnY && mouseY <= btnY + btnH) {
                         if (isDownloading) {
                             cancelDownload(info.getId());
                         } else if (!isInstalled) {
@@ -393,7 +397,7 @@ public class ModelLibraryScreen extends Screen {
                     }
 
                     // Activate Button
-                    if (mouseX >= btnActivateX && mouseX <= btnActivateX + 72 && mouseY >= btnY && mouseY <= btnY + 18) {
+                    if (mouseX >= btnActivateX && mouseX <= btnActivateX + 72 && mouseY >= btnY && mouseY <= btnY + btnH) {
                         if (isInstalled && !isActive) {
                             activateModel(info.getId());
                         } else if (!isInstalled) {
@@ -404,7 +408,7 @@ public class ModelLibraryScreen extends Screen {
 
                     return true;
                 }
-                currentY += cardH + 6;
+                currentY += cardH + cardGap;
             }
         }
 
@@ -439,19 +443,54 @@ public class ModelLibraryScreen extends Screen {
         extractor.fill(containerX, containerY, containerX + containerW, containerY + containerH, 0xF0121417);
         drawContainerBorder(extractor, containerX, containerY, containerW, containerH);
 
-        // 3. Fixed Header Title & Subtitle
+        // 3. Fixed Solid Header Bar (Height: 82)
+        int headerH = getHeaderHeight();
+        int headerBottom = containerY + headerH;
+        extractor.fill(containerX + 1, containerY + 1, containerX + containerW - 1, headerBottom, 0xF516191E);
+        extractor.fill(containerX + 1, headerBottom, containerX + containerW - 1, headerBottom + 1, 0xFF2A2E35);
+
+        // Header Title & Subtitle
         extractor.centeredText(this.font, "§lLanguage & Model Library", centerX, containerY + 8, 0xFFFFFFFF);
         extractor.centeredText(this.font, "§7Select, download, and activate verified offline speech engines", centerX, containerY + 20, 0xFFA0B0BE);
+
+        // Search Box background frame
+        int searchW = containerW - 32;
+        int searchX = containerX + 16;
+        int searchY = containerY + 34;
+        extractor.fill(searchX - 1, searchY - 1, searchX + searchW + 1, searchY + 19, 0xFF0E1013);
+        drawBorder(extractor, searchX - 1, searchY - 1, searchW + 2, 20, searchBox != null && searchBox.isFocused() ? 0xFF29B6F6 : 0xFF353C48);
+
+        // Category Filter Tabs
+        int catY = searchY + 23;
+        int catBtnH = 18;
+        int totalSpacing = 4 * 4;
+        int catBtnW = (containerW - 32 - totalSpacing) / 5;
+        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
+
+        for (int i = 0; i < categories.length; i++) {
+            int btnX = searchX + (i * (catBtnW + 4));
+            boolean isSelected = activeCategory.equalsIgnoreCase(categories[i]);
+            boolean hovered = mouseX >= btnX && mouseX <= btnX + catBtnW && mouseY >= catY && mouseY <= catY + catBtnH;
+
+            int tabBg = isSelected ? 0xFF1E3A2F : (hovered ? 0xFF262C35 : 0xFF191C22);
+            int tabBorder = isSelected ? 0xFF4CAF50 : (hovered ? 0xFF8FA0B5 : 0xFF353C48);
+            extractor.fill(btnX, catY, btnX + catBtnW, catY + catBtnH, tabBg);
+            drawBorder(extractor, btnX, catY, catBtnW, catBtnH, tabBorder);
+
+            String tabLabel = isSelected ? ("§a§l" + categories[i]) : (hovered ? ("§f" + categories[i]) : ("§7" + categories[i]));
+            extractor.centeredText(this.font, tabLabel, btnX + (catBtnW / 2), catY + 5, 0xFFFFFFFF);
+        }
 
         // 4. Scrollable Model Cards with Scissor Clipping
         int listTop = getListTop();
         int listBottom = getListBottom();
-        int listLeft = containerX + 10;
-        int listRight = containerX + containerW - 10;
+        int listLeft = containerX + 12;
+        int listRight = containerX + containerW - 12;
 
-        int cardW = containerW - 24;
-        int cardX = containerX + 12;
-        int cardH = 86;
+        int cardW = containerW - 32;
+        int cardX = containerX + 16;
+        int cardH = 88;
+        int cardGap = 8;
 
         extractor.enableScissor(listLeft, listTop, listRight, listBottom);
 
@@ -460,17 +499,17 @@ public class ModelLibraryScreen extends Screen {
             if (currentY + cardH >= listTop && currentY <= listBottom) {
                 renderModelCard(extractor, info, cardX, currentY, cardW, cardH, mouseX, mouseY);
             }
-            currentY += cardH + 6;
+            currentY += cardH + cardGap;
         }
 
         extractor.disableScissor();
 
         // 5. Gradient Fades at Scrollable Edges
         if (scrollOffset > 0) {
-            extractor.fillGradient(listLeft, listTop, listRight, listTop + 14, 0xF0121417, 0x00121417);
+            extractor.fillGradient(listLeft, listTop, listRight, listTop + 14, 0xF516191E, 0x0016191E);
         }
         if (scrollOffset < maxScroll) {
-            extractor.fillGradient(listLeft, listBottom - 14, listRight, listBottom, 0x00121417, 0xF0121417);
+            extractor.fillGradient(listLeft, listBottom - 14, listRight, listBottom, 0x0014171A, 0xF514171A);
         }
 
         // 6. Fixed Footer Area
@@ -478,7 +517,7 @@ public class ModelLibraryScreen extends Screen {
         int footerY = containerY + containerH - footerH;
 
         extractor.fill(containerX + 1, footerY, containerX + containerW - 1, containerY + containerH - 1, 0xF514171A);
-        extractor.fill(containerX, footerY, containerX + containerW, footerY + 1, 0xFF2A2E35);
+        extractor.fill(containerX + 1, footerY, containerX + containerW - 1, footerY + 1, 0xFF2A2E35);
 
         // Active Model Status Indicator on Left of Footer
         SpeechModelInfo activeInfo = modelManager != null ? modelManager.getModelInfo(config.getActiveModelId()) : null;
@@ -487,14 +526,14 @@ public class ModelLibraryScreen extends Screen {
         String activeText = activeInstalled
                 ? "§8Active Engine: §a● §f" + activeName
                 : "§8Active Engine: §e⚠ §7" + activeName + " §c(Not Downloaded)";
-        extractor.text(this.font, activeText, containerX + 14, footerY + 7, 0xFFFFFFFF, true);
+        extractor.text(this.font, activeText, containerX + 16, footerY + 7, 0xFFFFFFFF, true);
 
         // Status Banner Notification
         if (!statusBanner.isEmpty() && System.currentTimeMillis() - statusBannerTime < 4000) {
             extractor.centeredText(this.font, statusBanner, centerX, footerY - 14, 0xFFFFFFFF);
         }
 
-        // 7. Render all interactive widgets (search box, category buttons, Back button) ON TOP of container
+        // 7. Render interactive widgets (search box, Back button) ON TOP of container
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
 
         // 8. Render Details Modal Popup if open
@@ -511,17 +550,17 @@ public class ModelLibraryScreen extends Screen {
         boolean isDownloading = info.getId().equals(downloadingModelId);
 
         // Background color
-        int bgColor = isSelected ? 0xF01B2430 : (isHovered ? 0xF01C2026 : 0xF016181C);
+        int bgColor = isSelected ? 0xF01D2735 : (isHovered ? 0xF01E2228 : 0xF016181D);
         extractor.fill(x, y, x + w, y + h, bgColor);
 
         // Border color: Green for Active, Cyan for Selected, Subtle for normal
-        int borderColor = isActive ? 0xFF4CAF50 : (isSelected ? 0xFF29B6F6 : (isHovered ? 0xFF606874 : 0xFF2E333C));
+        int borderColor = isActive ? 0xFF4CAF50 : (isSelected ? 0xFF29B6F6 : (isHovered ? 0xFF657080 : 0xFF2D333D));
         drawBorder(extractor, x, y, w, h, borderColor);
 
-        // 1. Top Section (y + 5): Name, Family & Status Badge
+        // 1. Top Section (y + 6): Name, Family & Status Badge
         String title = "§f§l" + info.getDisplayName();
         String familyBadge = " §7[" + info.getFamily().getDisplayTitle() + "]";
-        extractor.text(this.font, title + familyBadge, x + 8, y + 5, 0xFFFFFFFF, true);
+        extractor.text(this.font, title + familyBadge, x + 10, y + 6, 0xFFFFFFFF, true);
 
         String badge;
         int badgeColor;
@@ -538,39 +577,40 @@ public class ModelLibraryScreen extends Screen {
             badge = "§7[NOT INSTALLED]";
             badgeColor = 0xFFAAAAAA;
         }
-        int badgeX = x + w - this.font.width(badge) - 8;
-        extractor.text(this.font, badge, badgeX, y + 5, badgeColor, true);
+        int badgeX = x + w - this.font.width(badge) - 10;
+        extractor.text(this.font, badge, badgeX, y + 6, badgeColor, true);
 
-        // 2. Description (y + 18)
+        // 2. Description (y + 21)
         String desc = info.getShortDescription();
-        int maxDescW = w - 16;
+        int maxDescW = w - 20;
         if (this.font.width(desc) > maxDescW) {
             desc = this.font.plainSubstrByWidth(desc, maxDescW - 12) + "...";
         }
-        extractor.text(this.font, "§7" + desc, x + 8, y + 18, 0xFFD0D7DE, true);
+        extractor.text(this.font, "§7" + desc, x + 10, y + 21, 0xFFD0D7DE, true);
 
-        // 3. Information Section (y + 32, y + 45)
+        // 3. Information Section (y + 36, y + 50)
         String line1 = "§7Languages: §f" + info.getSupportedLanguages() + "  §8|  §7Accuracy: §e" + info.getHinglishSupport() + "  §8|  §7Format: §f" + info.getOutputScript();
-        if (this.font.width(line1) > w - 16) {
-            line1 = this.font.plainSubstrByWidth(line1, w - 24) + "...";
+        if (this.font.width(line1) > w - 20) {
+            line1 = this.font.plainSubstrByWidth(line1, w - 28) + "...";
         }
-        extractor.text(this.font, line1, x + 8, y + 32, 0xFFB0BAC5, true);
+        extractor.text(this.font, line1, x + 10, y + 36, 0xFFB0BAC5, true);
 
         String line2 = "§7Download: §b" + info.getFormattedDownloadSize() + "  §8|  §7Specs: §6" + info.getHardwareRequirements();
-        if (this.font.width(line2) > w - 16) {
-            line2 = this.font.plainSubstrByWidth(line2, w - 24) + "...";
+        if (this.font.width(line2) > w - 20) {
+            line2 = this.font.plainSubstrByWidth(line2, w - 28) + "...";
         }
-        extractor.text(this.font, line2, x + 8, y + 45, 0xFF909AA5, true);
+        extractor.text(this.font, line2, x + 10, y + 50, 0xFF909AA5, true);
 
-        // 4. Action Section (y + h - 22, height 18)
-        int btnY = y + h - 22;
+        // 4. Action Section (y + h - 23, height 17)
+        int btnY = y + h - 23;
+        int btnH = 17;
 
         // Download progress bar on left if downloading
         if (isDownloading) {
-            int pbX = x + 8;
-            int pbY = btnY + 4;
-            int pbW = w - 220;
-            int pbH = 10;
+            int pbX = x + 10;
+            int pbY = btnY + 3;
+            int pbW = w - 230;
+            int pbH = 11;
             extractor.fill(pbX, pbY, pbX + pbW, pbY + pbH, 0xFF14171A);
             if (downloadPercent > 0) {
                 int fillW = (int) ((pbW * downloadPercent) / 100.0);
@@ -583,40 +623,40 @@ public class ModelLibraryScreen extends Screen {
                     : (downloadedBytes > 0 && totalBytes > 0
                         ? String.format("%.1f/%.1f MB (%d%%)", downloadedBytes / (1024.0 * 1024.0), totalBytes / (1024.0 * 1024.0), downloadPercent)
                         : (downloadPercent >= 0 ? downloadPercent + "%" : "Downloading..."));
-            extractor.text(this.font, progressText, pbX + 4, pbY + 1, 0xFFFFFFFF, true);
+            extractor.text(this.font, progressText, pbX + 4, pbY + 2, 0xFFFFFFFF, true);
         }
 
         // Details Button (width: 54)
-        int btnDetailsX = x + w - 208;
-        renderMiniButton(extractor, "Details", btnDetailsX, btnY, 54, 18, mouseX, mouseY, 0xFF353A42);
+        int btnDetailsX = x + w - 214;
+        renderMiniButton(extractor, "Details", btnDetailsX, btnY, 54, btnH, mouseX, mouseY, 0xFF353A42);
 
         // Download / Cancel / Remove Button (width: 72)
-        int btnDownloadX = x + w - 150;
+        int btnDownloadX = x + w - 156;
         if (isDownloading) {
-            renderMiniButton(extractor, "§cCancel", btnDownloadX, btnY, 72, 18, mouseX, mouseY, 0xFF6B1D1D);
+            renderMiniButton(extractor, "§cCancel", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF6B1D1D);
         } else if (!isInstalled) {
-            renderMiniButton(extractor, "§6Download", btnDownloadX, btnY, 72, 18, mouseX, mouseY, 0xFF9E5A10);
+            renderMiniButton(extractor, "§6Download", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF8A5012);
         } else {
-            renderMiniButton(extractor, "§7Remove", btnDownloadX, btnY, 72, 18, mouseX, mouseY, 0xFF2A2D33);
+            renderMiniButton(extractor, "§7Remove", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF2A2D33);
         }
 
         // Activate / Active Button (width: 72)
-        int btnActivateX = x + w - 74;
+        int btnActivateX = x + w - 80;
         if (isActive) {
-            renderMiniButton(extractor, "§aActive ✓", btnActivateX, btnY, 72, 18, mouseX, mouseY, 0xFF1B5E20);
+            renderMiniButton(extractor, "§aActive ✓", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1B5E20);
         } else if (isInstalled) {
-            renderMiniButton(extractor, "§fActivate", btnActivateX, btnY, 72, 18, mouseX, mouseY, 0xFF1976D2);
+            renderMiniButton(extractor, "§fActivate", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1976D2);
         } else {
-            renderMiniButton(extractor, "§8Inactive", btnActivateX, btnY, 72, 18, mouseX, mouseY, 0xFF1C1E22);
+            renderMiniButton(extractor, "§8Inactive", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1A1C20);
         }
     }
 
     private void renderMiniButton(GuiGraphicsExtractor extractor, String label, int x, int y, int w, int h, int mouseX, int mouseY, int baseColor) {
         boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
-        int color = hovered ? (baseColor + 0x00181818) : baseColor;
+        int color = hovered ? (baseColor + 0x00151515) : baseColor;
         extractor.fill(x, y, x + w, y + h, color | 0xFF000000);
-        drawBorder(extractor, x, y, w, h, hovered ? 0xFFFFFFFF : 0xFF555D68);
-        extractor.centeredText(this.font, label, x + (w / 2), y + 5, 0xFFFFFFFF);
+        drawBorder(extractor, x, y, w, h, hovered ? 0xFFFFFFFF : 0xFF4A525D);
+        extractor.centeredText(this.font, label, x + (w / 2), y + 4, 0xFFFFFFFF);
     }
 
     private void renderDetailsModal(GuiGraphicsExtractor extractor, SpeechModelInfo info, int mouseX, int mouseY) {
@@ -639,28 +679,28 @@ public class ModelLibraryScreen extends Screen {
         extractor.text(this.font, "§c[X]", modalX + modalW - 20, modalY + 10, 0xFFFF5555, true);
 
         int lineY = modalY + 28;
-        extractor.text(this.font, "§8Model ID: §f" + info.getId(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Model ID: §f" + info.getId(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Family: §e" + info.getFamily().getDisplayTitle(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Family: §e" + info.getFamily().getDisplayTitle(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Languages: §f" + info.getSupportedLanguages(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Languages: §f" + info.getSupportedLanguages(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Accuracy: §a" + info.getHinglishSupport(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Accuracy: §a" + info.getHinglishSupport(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Output Script: §f" + info.getOutputScript(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Output Script: §f" + info.getOutputScript(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Download Size: §b" + info.getFormattedDownloadSize() + " §8(Uncompressed: §b" + info.getFormattedUncompressedSize() + "§8)", modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Download Size: §b" + info.getFormattedDownloadSize() + " §7(Uncompressed: §b" + info.getFormattedUncompressedSize() + "§7)", modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Hardware Specs: §6" + info.getHardwareRequirements(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Hardware Specs: §6" + info.getHardwareRequirements(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8Runtime: §f" + info.getRuntimeCompatibility(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7Runtime: §f" + info.getRuntimeCompatibility(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
-        extractor.text(this.font, "§8License: §7" + info.getLicense(), modalX + 12, lineY, 0xFFCCCCCC, false);
+        extractor.text(this.font, "§7License: §f" + info.getLicense(), modalX + 12, lineY, 0xFFFFFFFF, false);
         lineY += 13;
 
         String sha = info.getPrimarySha256();
         if (sha.length() > 24) sha = sha.substring(0, 24) + "...";
-        extractor.text(this.font, "§8SHA-256: §7" + (sha.isEmpty() ? "Verified Official Mirror" : sha), modalX + 12, lineY, 0xFF888888, false);
+        extractor.text(this.font, "§7SHA-256: §8" + (sha.isEmpty() ? "Verified Official Mirror" : sha), modalX + 12, lineY, 0xFFAAAAAA, false);
         lineY += 13;
 
         File dir = modelManager.getModelDir(info.getId());
@@ -668,7 +708,7 @@ public class ModelLibraryScreen extends Screen {
         if (this.font.width(path) > modalW - 24) {
             path = "..." + path.substring(Math.max(0, path.length() - 40));
         }
-        extractor.text(this.font, "§8Local Path: §7" + path, modalX + 12, lineY, 0xFF777777, false);
+        extractor.text(this.font, "§7Local Path: §8" + path, modalX + 12, lineY, 0xFFAAAAAA, false);
 
         // Close button at bottom
         int closeBtnY = modalY + modalH - 25;
