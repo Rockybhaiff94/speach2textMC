@@ -1,51 +1,43 @@
 # SPECIFICATION: SpeakCraft — Minecraft Real-Time Voice-to-Text Client Mod
 
-**Status:** FINALIZED  
+**Status:** FINALIZED — REFACTORED FOR DUAL-MODEL HINGLISH + ENGLISH PIPELINE  
 **Author:** Senior Minecraft Fabric Developer, Audio Systems Engineer & Game UI/UX Designer  
-**Date:** 2026-10-27  
+**Date:** 2026-11-01  
 **Target Environments:** Minecraft Java Edition 26.2, 26.3 (Fabric Mod Loader)
 
 ---
 
 ## 1. Executive Summary & Goals
 
-SpeakCraft (`voice2text`) is an offline-first, client-side Fabric mod for Minecraft Java Edition that transcribes spoken player voice into Minecraft chat in real time.
+SpeakCraft (`voice2text`) is a lightweight, offline-first, client-side Fabric mod for Minecraft Java Edition that transcribes spoken player voice into Minecraft chat in real time.
 
-Key User Experiences:
-1. **Activation Mode (Press to Start, Press Again to Stop)**:
-   - Configurable Activation Key (default `T`).
-   - If the key conflicts with an existing Minecraft action (e.g., `T` opens chat), SpeakCraft detects the conflict against registered Minecraft `KeyMapping`s and uses a double-tap window (e.g. 300ms).
-     - Double-tap: activates or stops SpeakCraft without triggering the conflicting Minecraft action.
-     - Single tap without second press: defers the conflicting Minecraft action until the window expires, then executes it normally.
-   - If the key has NO conflict, a single press starts recording and a single press stops recording.
-2. **Hold-to-Talk Mode (Push-to-Talk)**:
-   - Separate configurable key (default `V`), clearly labeled as **Hold-to-Talk (Push-to-Talk)**.
-   - Press and hold to capture and stream speech recognition.
-   - Release key to immediately stop recording and transfer the transcription into Minecraft chat as a draft.
-   - Guard against key repeats, screen changes, window blur, and disconnects.
-3. **Real-Time Streaming Dictation**:
-   - Progressive partial recognition updates live as the player speaks, avoiding word duplication or repetition.
-   - When chat is closed, recording does NOT open the chat screen. Instead, recognized text streams progressively in the bottom-right SpeakCraft HUD preview.
-   - When recording stops, the finalized draft is inserted into Minecraft chat for the player to review.
-   - **Never auto-send**: The player always presses `Enter` manually.
-   - If chat is already open, the input text field updates progressively while preserving any existing player text.
-4. **Live Waveform HUD**:
-   - Compact, polished Minecraft-aesthetic HUD positioned in the bottom-right above the chat area.
-   - Displays listening status dot (green listening, amber finalizing), animated vertical EQ bars driven by real incoming microphone RMS amplitude, and live recognized draft preview.
-   - Hidden when inactive.
-5. **Dedicated Directory & Storage**:
-   - Active instance path `.minecraft/voice2text/` (`models/`, `downloads/`, `temp/`, `logs/`, `config.json`).
-   - Automatic model discovery and validation in `voice2text/models/`.
-   - Migration from legacy config locations (`.minecraft/config/speakcraft/` and `.minecraft/config/voice2text.json`).
-6. **Microphone Device Selection**:
-   - Enumeration of real physical and virtual recording lines from Java Sound (`TargetDataLine`).
-   - Dropdown selection with "System Default" and specific input devices.
-   - Safe fallback and disconnection notifications.
-7. **Speech Model Catalog & Downloader**:
-   - Multi-language catalog: English (US), English (India), German, Spanish, French, Italian, Portuguese, Russian, Hindi.
-   - Verified official Vosk URLs, correct file sizes, and official checksums.
-   - Resilient download pipeline with HTTP redirect support, streaming hash verification, staging directory extraction, and Zip Slip protection.
-   - Manual download fallback link and instructions if automatic download fails.
+### Core Architecture Overhaul:
+1. **Exactly Two Supported Speech Models**:
+   - **Model 1: Whisper Hindi2Hinglish Apex (`whisper-hindi2hinglish-apex`)**: Primary Hindi speech recognition and Hindi-to-Roman transliteration engine. Converts Hindi speech into natural Roman English alphabets (A-Z) without converting genuine English words into incorrect phonetic Hindi.
+   - **Model 2: Whisper Small (`whisper-small`)**: English speech recognition and word identification engine. Independently identifies genuine English words, spellings, and audio timestamps from the original audio.
+   - **Complete Removal of Extra Models**: All unnecessary models (Whisper Large-v3, Large-v3 Turbo, other Whisper variants, multiple regional Vosk models, IndicConformer, Shruti) are cleanly removed from catalog, registration, and UI.
+
+2. **Dual-Model Recognition & Intelligent Merging Pipeline**:
+   - **Single Audio Capture**: User audio is recorded once into an audio buffer with timing information.
+   - **Independent Dual Recognition**: The audio is processed by both Whisper Hindi2Hinglish Apex and Whisper Small.
+   - **Word-Level Alignment & Language Classification**: Word intervals, timestamps, sequence order, and confidence scores determine language boundaries without classifying all Roman text as English.
+   - **Merged Romanized Hinglish Output**: Preserves genuine English spelling and exact word positions, while transcribing Hindi speech into natural Romanized Hindi.
+
+3. **Simplified User Interface**:
+   - **Minimal Settings Panel (`VoiceConfigScreen`)**:
+     - Removed: Voice Capitalization button, Voice Punctuation button, Output Script toggle, duplicate model cycle/download controls, and unused AI options.
+     - Kept: Automatic Chat Sending, Chat-Only Toggle Key (`T`), Gameplay Hold Key (`V`), Stop & Draft Key (`P`), Settings Key (`O`), Microphone Device selection & refresh, Reset Keybinds, Language & Model Library access, and Done button.
+   - **Focused Model Library (`ModelLibraryScreen`)**:
+     - Displays ONLY the two supported models (`Whisper Hindi2Hinglish Apex` and `Whisper Small`).
+     - High-contrast, clean layout with direct Download, Activate, and Details actions.
+
+4. **Preserved Gameplay & Controls**:
+   - Preserves `V` gameplay hold-to-activate (with player movement intact: W, A, S, D, Space, Shift, Ctrl).
+   - Preserves `T` chat-only toggle recording.
+   - Preserves `P` stop & draft.
+   - Preserves `Escape` cancel.
+   - Configurable Minecraft keybinds.
+   - Chat input integration, automatic send, manual text insertion, client-thread safety.
 
 ---
 
@@ -155,37 +147,35 @@ d:/mybuilds/voice2text/
   - Never submits partial, empty, or failed speech results.
   - Minecraft client thread safety: all chat operations execute via `clientThreadExecutor.execute(...)`.
 
-### 3.3 Hinglish (Hindi-English) Speech Recognition & Romanization Pipeline
-- **Target Output**: Natural Romanized Hindi mixed with English gaming vocabulary (e.g. `Bhai game mein aa jao.`, `Server par jaldi join karo.`, `Isko config mein change karna padega.`).
-- **Offline Kaldi/Vosk Acoustic Engine**: Recognizes phonetics using `vosk-model-small-hi-0.22` or `vosk-model-small-hinglish` entirely offline.
-- **Transliteration Pipeline (`HinglishTransliterationService`)**:
-  - Preserves pure English words, numbers, Minecraft commands (`/tp`, `/give`), and technical symbols untouched.
-  - Unicode NFC normalization aligns decomposed nuktas with dictionary entries.
-  - Full candra vowel support: candra-O `ॉ` (0x0949) and `ऑ` (0x0911) -> `o` (fixes `block`, `login`, `voice`, `config`, `offline`); candra-E `ॅ` (0x0945) and `ऍ` (0x090D) -> `e`.
-  - Nukta consonants: `ज़` -> `z`, `फ़` -> `f`, `क़` -> `q`, `ख़` -> `kh`, `ग़` -> `gh`, `ड़` -> `d`, `ढ़` -> `dh`.
-  - Matra + anusvara combinations: `में` -> `mein`, `हैं` -> `hain`, `लोगों` -> `logon`, `कहाँ` -> `kahan`.
-  - Schwa deletion: eliminates trailing schwa on final consonants (`kar` not `kara`) and medial schwa in `VC_CV` environments (`करना` -> `karna`, `पड़ेगा` -> `padega`, `चलना` -> `chalna`).
-  - Gaming loanword dictionary: `game`, `server`, `minecraft`, `guys`, `voice`, `chat`, `config`, `change`, `open`, `join`, `survival`.
+### 3.3 Dual-Model Hindi + English Recognition & Merging Pipeline
+- **Dual-Model Execution on Single Audio Stream**:
+  - The microphone streams audio to a synchronized recording buffer.
+  - **Whisper Hindi2Hinglish Apex**: Processes the audio to recognize Hindi speech and code-switched Hindi-English, producing natural Roman Hindi transcription with word timing and positions.
+  - **Whisper Small**: Independently processes the same audio to recognize English words, English pronunciation, and exact word timestamps.
+- **Word-Level Alignment & Classification (`DualModelAlignmentMerger`)**:
+  - Compares Hindi model Romanized words with English model candidate words.
+  - Uses word-level timestamps and sequence position to align words across both recognition streams.
+  - Distinguishes genuine English words from Romanized Hindi words:
+    - Genuine English words (including short functional words `is`, `it`, `in`, `on`, `the`, `can`, `you`, `please`, `help`, `me`, `and`, `to`, `remove`, `problem`, `server`, etc., and proper nouns/names like `Ashish`) retain precise English spelling at their exact spoken positions.
+    - Hindi words retain their natural Romanized phonetic output (`mujhe`, `yahan`, `se`, `ye`, `samaan`, `hatwana`, `hai`, `mera`, `naam`, etc.).
+  - Deduplicates words recognized concurrently by both models for the same audio segment.
+  - Preserves legitimate repeated words (e.g. `I, I, I want to remove this` -> `I, I, I want to remove this`).
+  - Seamless fallback: if either model is missing or fails, gracefully outputs the result from the active working model.
 
-### 3.3 Green Audio-Reactive Dot Indicator with Grey Idle State & Transparent Background
-- **Visual Design**: 4 small circular dots (4×4 px, 3 px spacing) arranged horizontally on the right side of the chat input.
-- **100% Transparent Background**: No background rectangle, panel, card, border, or opaque overlay.
-- **Grey Idle State**: All dots remain neutral grey (`#929292`) and stationary when recording is active without speech.
-- **Animated Green Speech State**: Transitions smoothly to bright emerald green (`#39FF88`) with a vertical sinusoidal rise-and-fall wave animation and soft green glow when speech is detected.
-- **Voice Activity Detection**: Audio-driven with hysteresis (`0.035` entrance threshold, `0.020` exit threshold) and a 280 ms release timeout to bridge natural gaps between words without flickering.
-- **Dynamic Anchoring**: Positioned on the right side of the chat input `EditBox` (`boxRight - 8px margin`, vertically centered with chat line) across all GUI scales and resolutions.
-- **Finalizing & Clean Inactive Hide**: Stationary amber dots during finalization (`#FFD600`), and clean disappearance when recording ends.
-
-### 3.3 Audio Device Management
-- Enumerates real input lines via `AudioSystem.getMixerInfo()` matching 16kHz 16-bit mono PCM.
-- System Default is the primary option; specific devices saved in `config.json`.
-- Missing/disconnected device falls back gracefully to System Default with a status notification.
-
-### 3.4 Speech Models & Downloader
-- Official Vosk small models catalog with verified MD5 and SHA-256 hashes.
-- Downloader supports HTTP 301/302/307/308 redirects, user-agent headers, and timeout configurations.
-- Staging directory unzipping with canonical path validation prevents Zip Slip vulnerabilities.
-- Manual download fallback instructions provided on failure.
+### 3.4 Supported Speech Models (Only Two Models)
+1. **Whisper Hindi2Hinglish Apex (`whisper-hindi2hinglish-apex`)**:
+   - Model ID: `whisper-hindi2hinglish-apex` (Default Model).
+   - Primary Hindi and Hinglish speech recognition engine.
+   - Downloads verified Kaldi/Vosk Hindi acoustic model (`vosk-model-small-hi-0.22.zip`, MD5 `ab7280bbcf29e334f7e3b2a9ac0ca386`, SHA-256 `be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21`).
+   - Roman Hindi output directly enabled.
+2. **Whisper Small (`whisper-small`)**:
+   - Model ID: `whisper-small`.
+   - Secondary English recognition and word identification engine.
+   - Downloads verified Kaldi/Vosk small English model (`vosk-model-small-en-us-0.15.zip`, MD5 `80f1265262c9a8a515f2707498e1b485`).
+   - Fast, low-latency, offline recognition providing word-level timestamps for English candidate identification.
+3. **All Other Models Removed**:
+   - Removed: Whisper Large-v3, Large-v3 Turbo, Whisper Medium, Whisper Base, Whisper Tiny, Vosk German, Spanish, French, Italian, Portuguese, Russian, AI4Bharat IndicConformer, Shruti.
+   - Preserves user files on disk; removes catalog entries and unused engine mappings.
 
 ### 3.5 Non-Blocking Asynchronous Audio & Session Lifecycle (V-Key Freeze Fix)
 - **Zero Client-Thread Blocking**: All microphone acquisition, Java Sound `TargetDataLine` opening, Vosk model initialization, and recognizer start/reset operations execute asynchronously on a dedicated daemon background executor (`recordingExecutor`).

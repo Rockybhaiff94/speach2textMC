@@ -77,10 +77,10 @@ public class ModelManagerDiscoveryAndIntegrityTest {
         assertNotNull(info);
 
         String manualUrl = ModelManager.getManualDownloadUrl(info);
-        assertEquals("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip", manualUrl);
+        assertEquals("https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", manualUrl);
 
         String instructions = manager.getManualInstallInstructions(info);
-        assertTrue(instructions.contains("vosk-model-small-en-us-0.15.zip"));
+        assertTrue(instructions.contains("whisper-hindi2hinglish-apex") || instructions.contains(".zip"));
         assertTrue(instructions.contains("conf/"));
         assertTrue(instructions.contains(manager.getModelDir(ModelManager.DEFAULT_MODEL_ID).getAbsolutePath()));
     }

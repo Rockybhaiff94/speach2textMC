@@ -53,9 +53,9 @@ public class ModelLibraryScreenTest {
 
     @Test
     public void testFormattedSizes() {
-        SpeechModelInfo largeV3 = modelManager.getModelInfo("whisper-large-v3");
-        assertNotNull(largeV3);
-        assertTrue(largeV3.getFormattedDownloadSize().contains("GB"));
+        SpeechModelInfo apex = modelManager.getModelInfo("whisper-hindi2hinglish-apex");
+        assertNotNull(apex);
+        assertTrue(apex.getFormattedDownloadSize().contains("MB"));
 
         SpeechModelInfo small = modelManager.getModelInfo("whisper-small");
         assertNotNull(small);

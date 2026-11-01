@@ -21,103 +21,33 @@ public class ModelManagerTest {
     public void testRegistryContainsAllRequiredModels(@TempDir Path tempDir) {
         ModelManager manager = new ModelManager(tempDir.toFile());
 
-        // English (US)
-        SpeechModelInfo enUs = manager.getModelInfo("vosk-model-small-en-us-0.15");
-        assertNotNull(enUs);
-        assertEquals("en-US", enUs.getLanguageCode());
-        assertEquals("English (US) Small", enUs.getDisplayName());
-        assertTrue(enUs.hasAlternateUrl());
-        assertEquals("30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498", enUs.getAlternateSha256());
+        assertEquals(2, manager.getAvailableModels().size());
 
-        // English (India) - separately listed
-        SpeechModelInfo enIn = manager.getModelInfo("vosk-model-small-en-in-0.4");
-        assertNotNull(enIn);
-        assertEquals("en-IN", enIn.getLanguageCode());
-        assertEquals("English (India) Small", enIn.getDisplayName());
-        assertNotEquals(enUs.getId(), enIn.getId());
-
-        // German
-        SpeechModelInfo de = manager.getModelInfo("vosk-model-small-de-0.15");
-        assertNotNull(de);
-        assertEquals("de-DE", de.getLanguageCode());
-
-        // Spanish
-        SpeechModelInfo es = manager.getModelInfo("vosk-model-small-es-0.42");
-        assertNotNull(es);
-        assertEquals("es-ES", es.getLanguageCode());
-
-        // French
-        SpeechModelInfo fr = manager.getModelInfo("vosk-model-small-fr-0.22");
-        assertNotNull(fr);
-        assertEquals("fr-FR", fr.getLanguageCode());
-
-        // Italian
-        SpeechModelInfo it = manager.getModelInfo("vosk-model-small-it-0.22");
-        assertNotNull(it);
-        assertEquals("it-IT", it.getLanguageCode());
-
-        // Portuguese
-        SpeechModelInfo pt = manager.getModelInfo("vosk-model-small-pt-0.3");
-        assertNotNull(pt);
-        assertEquals("pt-PT", pt.getLanguageCode());
-
-        // Russian
-        SpeechModelInfo ru = manager.getModelInfo("vosk-model-small-ru-0.22");
-        assertNotNull(ru);
-        assertEquals("ru-RU", ru.getLanguageCode());
-
-        // Hindi
-        SpeechModelInfo hi = manager.getModelInfo("vosk-model-small-hi-0.22");
-        assertNotNull(hi);
-        assertEquals("hi-IN", hi.getLanguageCode());
-
-        // Hinglish (Hindi + English)
-        SpeechModelInfo hinglish = manager.getModelInfo("vosk-model-small-hinglish");
-        assertNotNull(hinglish);
-        assertEquals("hi-en", hinglish.getLanguageCode());
-        assertEquals("Hinglish (Hindi + English)", hinglish.getDisplayName());
-
-        // OpenAI Whisper Models
-        SpeechModelInfo wL3 = manager.getModelInfo("whisper-large-v3");
-        assertNotNull(wL3);
-        assertEquals(ModelFamily.WHISPER, wL3.getFamily());
-
-        SpeechModelInfo wTurbo = manager.getModelInfo("whisper-large-v3-turbo");
-        assertNotNull(wTurbo);
-        assertEquals("OpenAI Whisper", wTurbo.getCategory());
-
-        SpeechModelInfo wSmall = manager.getModelInfo("whisper-small");
-        assertNotNull(wSmall);
-
-        SpeechModelInfo wMedium = manager.getModelInfo("whisper-medium");
-        assertNotNull(wMedium);
-
-        SpeechModelInfo wBase = manager.getModelInfo("whisper-base");
-        assertNotNull(wBase);
-
-        SpeechModelInfo wTiny = manager.getModelInfo("whisper-tiny");
-        assertNotNull(wTiny);
-
-        // Hinglish Specialized Models
+        // Model 1: Whisper Hindi2Hinglish Apex
         SpeechModelInfo apex = manager.getModelInfo("whisper-hindi2hinglish-apex");
         assertNotNull(apex);
+        assertEquals("hi-en", apex.getLanguageCode());
+        assertEquals("Whisper Hindi2Hinglish Apex", apex.getDisplayName());
         assertEquals(ModelFamily.HINGLISH_SPECIALIZED, apex.getFamily());
         assertEquals("Roman Hindi (Hinglish) Direct", apex.getOutputScript());
+        assertTrue(apex.hasAlternateUrl());
+        assertEquals("be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21", apex.getPrimarySha256());
+        assertEquals("ab7280bbcf29e334f7e3b2a9ac0ca386", apex.getMd5Checksum());
 
-        SpeechModelInfo swift = manager.getModelInfo("whisper-hindi2hinglish-swift");
-        assertNotNull(swift);
-        assertEquals(ModelFamily.HINGLISH_SPECIALIZED, swift.getFamily());
+        // Model 2: Whisper Small
+        SpeechModelInfo small = manager.getModelInfo("whisper-small");
+        assertNotNull(small);
+        assertEquals("en-US", small.getLanguageCode());
+        assertEquals("Whisper Small", small.getDisplayName());
+        assertEquals(ModelFamily.WHISPER, small.getFamily());
+        assertTrue(small.hasAlternateUrl());
+        assertEquals("30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498", small.getPrimarySha256());
+        assertEquals("09ab50ccd62b674cbaa231b825f9c1cb", small.getMd5Checksum());
 
-        // Shruti & IndicConformer
-        SpeechModelInfo shruti = manager.getModelInfo("shruti-asr-hi");
-        assertNotNull(shruti);
-        assertEquals(ModelFamily.SHRUTI, shruti.getFamily());
-
-        SpeechModelInfo indic = manager.getModelInfo("indicconformer-hi");
-        assertNotNull(indic);
-        assertEquals(ModelFamily.INDIC_CONFORMER, indic.getFamily());
-
-        assertTrue(manager.getAvailableModels().size() >= 20);
+        // Legacy fallback mapping
+        SpeechModelInfo fallbackEn = manager.getModelInfo("vosk-model-small-en-us-0.15");
+        assertNotNull(fallbackEn);
+        assertEquals("whisper-small", fallbackEn.getId());
     }
 
     @Test

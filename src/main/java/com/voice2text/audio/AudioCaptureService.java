@@ -27,6 +27,7 @@ public class AudioCaptureService {
     private final AudioSource audioSource;
     private final AudioLevelMeter levelMeter;
     private volatile SpeechRecognitionEngine speechEngine;
+    private volatile SpeechRecognitionEngine secondaryEngine;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final BlockingQueue<byte[]> audioQueue = new ArrayBlockingQueue<>(MAX_QUEUE_CAPACITY);
@@ -50,6 +51,14 @@ public class AudioCaptureService {
 
     public SpeechRecognitionEngine getSpeechEngine() {
         return speechEngine;
+    }
+
+    public void setSecondaryEngine(SpeechRecognitionEngine secondaryEngine) {
+        this.secondaryEngine = secondaryEngine;
+    }
+
+    public SpeechRecognitionEngine getSecondaryEngine() {
+        return secondaryEngine;
     }
 
     public synchronized void start() throws IOException {
@@ -135,6 +144,9 @@ public class AudioCaptureService {
                 if (chunk != null) {
                     if (speechEngine != null && speechEngine.isRunning()) {
                         speechEngine.acceptAudio(chunk, chunk.length);
+                    }
+                    if (secondaryEngine != null && secondaryEngine.isRunning()) {
+                        secondaryEngine.acceptAudio(chunk, chunk.length);
                     }
                 }
             } catch (InterruptedException e) {

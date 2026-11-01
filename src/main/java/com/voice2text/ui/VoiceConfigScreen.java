@@ -191,35 +191,7 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal("Hotkey to open Voice2Text Settings. Default: O")))
          .bounds(centerX + 4, startY + (rowSpacing * 2), btnW, btnH).build());
 
-        // --- ROW 4: General Formatting (Capitalization & Voice Punctuation) ---
-        addRenderableWidget(Button.builder(
-                Component.literal("Capitalization: " + (config.isAutoCapitalization() ? "§aOn" : "§cOff")),
-                button -> {
-                    config.setAutoCapitalization(!config.isAutoCapitalization());
-                    VoiceToTextMod mod = VoiceToTextMod.getInstance();
-                    if (mod != null && mod.getController() != null) {
-                        mod.getController().getTranscriptionBuffer().setAutoCapitalization(config.isAutoCapitalization());
-                    }
-                    button.setMessage(Component.literal("Capitalization: " + (config.isAutoCapitalization() ? "§aOn" : "§cOff")));
-                }
-        ).tooltip(Tooltip.create(Component.literal("Automatically capitalizes the first letter of recognized speech sentences.")))
-         .bounds(centerX - btnW - 4, startY + (rowSpacing * 3), btnW, btnH).build());
-
-        addRenderableWidget(Button.builder(
-                Component.literal("Voice Punctuation: " + (config.isVoiceCommandsEnabled() ? "§aOn" : "§cOff")),
-                button -> {
-                    config.setVoiceCommandsEnabled(!config.isVoiceCommandsEnabled());
-                    VoiceToTextMod mod = VoiceToTextMod.getInstance();
-                    if (mod != null && mod.getController() != null) {
-                        mod.getController().getTranscriptionBuffer().setVoiceCommandsEnabled(config.isVoiceCommandsEnabled());
-                    }
-                    button.setMessage(Component.literal("Voice Punctuation: " + (config.isVoiceCommandsEnabled() ? "§aOn" : "§cOff")));
-                }
-        ).tooltip(Tooltip.create(Component.literal("Translates spoken words like 'period', 'comma', 'question mark' into punctuation symbols.")))
-         .bounds(centerX + 4, startY + (rowSpacing * 3), btnW, btnH).build());
-
-        // --- ROW 5: Audio Input (Bottom-Left) & Speech Recognition (Bottom-Right) ---
-        // Bottom-Left: Microphone Dropdown / Cycle
+        // --- ROW 4: Microphone Selection & Refresh ---
         String currentMic = availableMics.get(currentMicIndex);
         boolean micAvailable = AudioDeviceManager.isDeviceAvailable(currentMic, new javax.sound.sampled.AudioFormat(16000.0f, 16, 1, true, false));
         String micDisplayName = currentMic;
@@ -237,42 +209,8 @@ public class VoiceConfigScreen extends Screen {
                     rebuildWidgets();
                 }
         ).tooltip(Tooltip.create(Component.literal("Click to cycle input microphones. Full device name: " + currentMic)))
-         .bounds(centerX - btnW - 4, startY + (rowSpacing * 4), btnW, btnH).build());
+         .bounds(centerX - btnW - 4, startY + (rowSpacing * 3), btnW, btnH).build());
 
-        // Bottom-Right: Language / Model Selection
-        String activeModelId = availableModelIds.get(currentModelIndex);
-        SpeechModelInfo activeInfo = modelManager.getModelInfo(activeModelId);
-        String modelTitle = activeInfo != null ? activeInfo.getDisplayName() : activeModelId;
-        if (modelTitle.length() > 22) {
-            modelTitle = modelTitle.substring(0, 20) + "..";
-        }
-        boolean isInstalled = modelManager.isModelInstalled(activeModelId);
-        ModelInstallationState installState = modelManager.getModelInstallationState(activeModelId);
-
-        addRenderableWidget(Button.builder(
-                Component.literal("Lang: §f" + modelTitle + (isInstalled ? " §a✓" : " §c✗")),
-                button -> {
-                    currentModelIndex = (currentModelIndex + 1) % availableModelIds.size();
-                    String newId = availableModelIds.get(currentModelIndex);
-                    config.setActiveModelId(newId);
-
-                    SpeechModelInfo newInfo = modelManager.getModelInfo(newId);
-                    if (newInfo != null) {
-                        config.setSpeechLanguage(newInfo.getLanguageCode());
-                    }
-
-                    if (modelManager.isModelInstalled(newId)) {
-                        VoiceToTextMod mod = VoiceToTextMod.getInstance();
-                        if (mod != null && mod.getController() != null) {
-                            mod.getController().switchModel(newId);
-                        }
-                    }
-                    rebuildWidgets();
-                }
-        ).tooltip(Tooltip.create(Component.literal("Click to cycle speech models. Active: " + (activeInfo != null ? activeInfo.getDisplayName() : activeModelId))))
-         .bounds(centerX + 4, startY + (rowSpacing * 4), btnW, btnH).build());
-
-        // --- ROW 6: Audio Refresh (Bottom-Left) & Model Action (Bottom-Right) ---
         addRenderableWidget(Button.builder(
                 Component.literal("⟳ Refresh Microphones"),
                 button -> {
@@ -280,43 +218,9 @@ public class VoiceConfigScreen extends Screen {
                     rebuildWidgets();
                 }
         ).tooltip(Tooltip.create(Component.literal("Re-scans available operating system physical and virtual audio input devices.")))
-         .bounds(centerX - btnW - 4, startY + (rowSpacing * 5), btnW, btnH).build());
+         .bounds(centerX + 4, startY + (rowSpacing * 3), btnW, btnH).build());
 
-        String actionBtnText;
-        if (installState.isBusy()) {
-            actionBtnText = "§e" + installState.getDisplayLabel() + (downloadPercent >= 0 ? " " + downloadPercent + "%" : "");
-        } else if (isInstalled) {
-            actionBtnText = "§aReady ✓";
-        } else if (installState == ModelInstallationState.ERROR) {
-            actionBtnText = "§cRetry Download";
-        } else {
-            String sizeStr = activeInfo != null ? " (" + activeInfo.getFormattedDownloadSize() + ")" : "";
-            actionBtnText = "§6Download" + sizeStr;
-        }
-
-        addRenderableWidget(Button.builder(
-                Component.literal(actionBtnText),
-                button -> {
-                    if (installState.isBusy()) {
-                        modelManager.cancelDownload(activeModelId);
-                        isDownloading = false;
-                        downloadStatus = "§7Download cancelled.";
-                        rebuildWidgets();
-                    } else if (!isInstalled || installState == ModelInstallationState.ERROR) {
-                        startModelDownload();
-                    } else {
-                        VoiceToTextMod mod = VoiceToTextMod.getInstance();
-                        if (mod != null && mod.getController() != null) {
-                            mod.getController().switchModel(activeModelId);
-                        }
-                        downloadStatus = "§aModel is active and verified.";
-                        rebuildWidgets();
-                    }
-                }
-        ).tooltip(Tooltip.create(Component.literal(isInstalled ? "Model installed. Click to ensure active." : "Download offline neural speech model from verified official repositories.")))
-         .bounds(centerX + 4, startY + (rowSpacing * 5), btnW, btnH).build());
-
-        // --- ROW 7: Reset Keybinds (Left) & Output Script (Right) ---
+        // --- ROW 5: Reset Keybinds & Model Library ---
         addRenderableWidget(Button.builder(
                 Component.literal("§7Reset Keybinds"),
                 button -> {
@@ -328,37 +232,18 @@ public class VoiceConfigScreen extends Screen {
                     selectedKeybind = SelectedKeybind.NONE;
                     rebuildWidgets();
                 }
-        ).tooltip(Tooltip.create(Component.literal("Restores default key mappings: T for activation, V for Hold-to-Talk, P for stop & draft, O for settings.")))
-         .bounds(centerX - btnW - 4, startY + (rowSpacing * 6), btnW, btnH).build());
+        ).tooltip(Tooltip.create(Component.literal("Restores default key mappings: T for chat activation, V for gameplay hold, P for stop & draft, O for settings.")))
+         .bounds(centerX - btnW - 4, startY + (rowSpacing * 4), btnW, btnH).build());
 
-        boolean isRoman = "ROMAN_HINDI".equalsIgnoreCase(config.getOutputScript());
-        String scriptLabel = "Output: §b" + (isRoman ? "Roman Hindi (Hinglish)" : "Devanagari Script");
         addRenderableWidget(Button.builder(
-                Component.literal(scriptLabel),
-                button -> {
-                    if ("ROMAN_HINDI".equalsIgnoreCase(config.getOutputScript())) {
-                        config.setOutputScript("DEVANAGARI");
-                    } else {
-                        config.setOutputScript("ROMAN_HINDI");
-                    }
-                    rebuildWidgets();
-                }
-        ).tooltip(Tooltip.create(Component.literal("Controls Hindi output script. Roman Hindi writes spoken Hindi in English letters, preserving English words without forcing Devanagari.")))
-         .bounds(centerX + 4, startY + (rowSpacing * 6), btnW, btnH).build());
-
-        // --- ROW 8: Language & Model Library (Centered at the very bottom of options) ---
-        int libraryW = 210;
-        int libraryH = 22;
-        int libraryY = startY + (rowSpacing * 7) + 2;
-        addRenderableWidget(Button.builder(
-                Component.literal("🌐 Language & Model Library ➔"),
+                Component.literal("🌐 Speech Model Library ➔"),
                 button -> {
                     if (this.minecraft != null) {
                         this.minecraft.gui.setScreen(new ModelLibraryScreen(this));
                     }
                 }
-        ).tooltip(Tooltip.create(Component.literal("Open the dedicated Language & Model Library to discover, download, and activate Whisper, Hinglish, Vosk, and Indic models.")))
-         .bounds(centerX - (libraryW / 2), libraryY, libraryW, libraryH).build());
+        ).tooltip(Tooltip.create(Component.literal("Manage the two supported speech models: Whisper Hindi2Hinglish Apex (Hindi) and Whisper Small (English).")))
+         .bounds(centerX + 4, startY + (rowSpacing * 4), btnW, btnH).build());
 
         // --- BOTTOM: Done Button ---
         addRenderableWidget(Button.builder(
@@ -372,7 +257,7 @@ public class VoiceConfigScreen extends Screen {
                         this.minecraft.gui.setScreen(parent);
                     }
                 }
-        ).bounds(centerX - 75, this.height - 24, 150, 20).build());
+        ).bounds(centerX - 100, this.height - 28, 200, 20).build());
     }
 
     @Override

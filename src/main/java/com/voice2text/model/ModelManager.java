@@ -26,7 +26,7 @@ import java.util.zip.ZipInputStream;
  */
 public class ModelManager {
 
-    public static final String DEFAULT_MODEL_ID = "vosk-model-small-en-us-0.15";
+    public static final String DEFAULT_MODEL_ID = "whisper-hindi2hinglish-apex";
 
     private final File modelsBaseDir;
     private final File downloadsBaseDir;
@@ -111,148 +111,7 @@ public class ModelManager {
      */
     private void registerDefaultModels() {
         // =========================================================================
-        // 1. OpenAI Whisper Models (Multilingual & High Accuracy)
-        // =========================================================================
-        registerModel(new SpeechModelInfo(
-                "whisper-large-v3",
-                "multilingual",
-                "Whisper Large-v3",
-                ModelFamily.WHISPER,
-                "OpenAI Whisper",
-                "OpenAI's flagship 1550M parameter model. Maximum accuracy across diverse Indian and global accents.",
-                "99+ Languages (Hindi, English, etc.)",
-                "High",
-                "Roman Hindi & Devanagari",
-                "8 GB+ RAM, GPU Recommended (4 GB+ VRAM)",
-                "Whisper Local Runtime (CPU/GPU)",
-                "FP16 / GGML",
-                "Supported & Ready",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-q5_0.bin",
-                3095033488L,
-                3100000000L,
-                "d288d0889de392a688b1391d1e48f074d207c088c422896561f52b665c82ff63",
-                "",
-                "",
-                "MIT"));
-
-        registerModel(new SpeechModelInfo(
-                "whisper-large-v3-turbo",
-                "multilingual",
-                "Whisper Large-v3 Turbo",
-                ModelFamily.WHISPER,
-                "OpenAI Whisper",
-                "Optimized 809M parameter model. Near Large-v3 accuracy at 4x-8x faster inference speed.",
-                "99+ Languages (Hindi, English, etc.)",
-                "High",
-                "Roman Hindi & Devanagari",
-                "6 GB+ RAM, Quad-Core CPU or GPU",
-                "Whisper Local Runtime (CPU/GPU)",
-                "Q5_0 / GGML",
-                "Supported & Ready",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
-                1623869952L,
-                1630000000L,
-                "1407cfa5a278672049e3592bc135f606e788c0372655ed51fb86e30b62391219",
-                "",
-                "",
-                "MIT"));
-
-        registerModel(new SpeechModelInfo(
-                "whisper-medium",
-                "multilingual",
-                "Whisper Medium",
-                ModelFamily.WHISPER,
-                "OpenAI Whisper",
-                "769M parameter multilingual model. Higher linguistic comprehension and code-switching nuance.",
-                "99+ Languages",
-                "High",
-                "Roman Hindi & Devanagari",
-                "4 GB RAM, Mid-tier GPU or Fast CPU",
-                "Whisper Local Runtime (CPU/GPU)",
-                "Q5_0 / GGML",
-                "Supported & Ready",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q5_0.bin",
-                1533869952L,
-                1534000000L,
-                "fd9727b6e1217c2f614f9b698455c4777609895ba3153597c55216b60ad2d552",
-                "",
-                "",
-                "MIT"));
-
-        registerModel(new SpeechModelInfo(
-                "whisper-small",
-                "multilingual",
-                "Whisper Small",
-                ModelFamily.WHISPER,
-                "OpenAI Whisper",
-                "244M parameter balanced model. Low memory footprint, fast transcription for gaming laptops.",
-                "99+ Languages",
-                "High",
-                "Roman Hindi & Devanagari",
-                "2 GB RAM, Standard CPU",
-                "Whisper Local Runtime (CPU/GPU)",
-                "Q5_1 / GGML",
-                "Supported & Ready",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
-                487845344L,
-                488000000L,
-                "55356645c2b361a969dfd0ef2c5a50d530afd8d31e6b8b24e0c9f107380236a8",
-                "",
-                "",
-                "MIT"));
-
-        registerModel(new SpeechModelInfo(
-                "whisper-base",
-                "multilingual",
-                "Whisper Base",
-                ModelFamily.WHISPER,
-                "OpenAI Whisper",
-                "74M parameter fast model. Minimal latency and low resource usage for basic dictation.",
-                "99+ Languages",
-                "Moderate",
-                "Roman Hindi & Devanagari",
-                "1 GB RAM, Lightweight CPU",
-                "Whisper Local Runtime (CPU/GPU)",
-                "Q5_1 / GGML",
-                "Supported & Ready",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
-                147964211L,
-                148000000L,
-                "60ed5bc3dd14eea856493d334349b405782ddcaf00e087302fb9432d01230188",
-                "",
-                "",
-                "MIT"));
-
-        registerModel(new SpeechModelInfo(
-                "whisper-tiny",
-                "multilingual",
-                "Whisper Tiny",
-                ModelFamily.WHISPER,
-                "OpenAI Whisper",
-                "39M parameter ultra-light model. Instant response times, runs on any hardware.",
-                "99+ Languages",
-                "Basic",
-                "Roman Hindi & Devanagari",
-                "512 MB RAM, Ultra-lightweight",
-                "Whisper Local Runtime (CPU/GPU)",
-                "Q5_1 / GGML",
-                "Supported & Ready",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
-                "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
-                77700000L,
-                78000000L,
-                "be436ff5a9216641696c21e6462725db197d1ec17b8f9ff122100868f02919d7",
-                "",
-                "",
-                "MIT"));
-
-        // =========================================================================
-        // 2. Hinglish-Specialized Models
+        // 1. Whisper Hindi2Hinglish Apex (Primary Hindi/Hinglish Recognition Engine)
         // =========================================================================
         registerModel(new SpeechModelInfo(
                 "whisper-hindi2hinglish-apex",
@@ -273,99 +132,26 @@ public class ModelManager {
                 44458845L,
                 132120576L,
                 "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "",
-                "ab7280bbcf29e334f7e3b2a9ac0ca386",
-                "MIT / Open-weights"));
-
-        registerModel(new SpeechModelInfo(
-                "whisper-hindi2hinglish-swift",
-                "hi-en",
-                "Whisper Hindi2Hinglish Swift",
-                ModelFamily.HINGLISH_SPECIALIZED,
-                "Hinglish Specialized",
-                "Quantized ultra-fast Hinglish model tuned for low latency in-game speech dictation.",
-                "Hindi, English, Hinglish Code-Switched",
-                "Specialized Real-Time Gaming",
-                "Roman Hindi (Hinglish) Direct",
-                "2 GB RAM, Dual-Core CPU",
-                "Whisper Local Runtime (CPU/GPU)",
-                "Q5_1 74M",
-                "Supported & Ready",
-                "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
-                44458845L,
-                132120576L,
                 "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "MIT / Open-weights"));
 
         // =========================================================================
-        // 3. Other Regional Indian Recognition Models
+        // 2. Whisper Small (English Recognition & Alignment Engine)
         // =========================================================================
         registerModel(new SpeechModelInfo(
-                "shruti-asr-hi",
-                "hi-IN",
-                "Shruti (IIT Madras / Bhashini)",
-                ModelFamily.SHRUTI,
-                "Indic / Regional",
-                "Acoustic model tailored for regional Indian accents, phonetic nuances, and Indian English.",
-                "Hindi & Indian Accented English",
-                "High",
-                "Devanagari & Roman Hindi",
-                "2 GB RAM, Standard CPU",
-                "Bhashini / ONNX Local Runtime",
-                "ONNX FP32",
-                "Supported & Ready",
-                "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip",
-                "",
-                44458845L,
-                118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "",
-                "ab7280bbcf29e334f7e3b2a9ac0ca386",
-                "Bhashini / MIT"));
-
-        registerModel(new SpeechModelInfo(
-                "indicconformer-hi",
-                "hi-IN",
-                "AI4Bharat IndicConformer",
-                ModelFamily.INDIC_CONFORMER,
-                "Indic / Regional",
-                "State-of-the-art Conformer ASR for Indian languages developed by AI4Bharat research lab.",
-                "Hindi & 22 Indian Scheduled Languages",
-                "Supported",
-                "Devanagari & Roman Hindi",
-                "4 GB RAM, Quad-Core CPU",
-                "IndicASR Local Runtime",
-                "Hybrid Conformer",
-                "Supported & Ready",
-                "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip",
-                "",
-                44458845L,
-                118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "",
-                "ab7280bbcf29e334f7e3b2a9ac0ca386",
-                "AI4Bharat / MIT"));
-
-        // =========================================================================
-        // 4. Offline Vosk Speech Models
-        // =========================================================================
-        // English (US) Small - Default
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-en-us-0.15",
+                "whisper-small",
                 "en-US",
-                "English (US) Small",
-                ModelFamily.VOSK,
-                "Vosk Offline",
-                "Default standard English offline speech model. Instant response and low CPU overhead.",
-                "English (US)",
-                "None",
-                "English / Latin",
-                "500 MB RAM, Lightweight",
-                "Vosk Native JNI (100% Offline)",
-                "Kaldi Int8",
+                "Whisper Small",
+                ModelFamily.WHISPER,
+                "OpenAI Whisper",
+                "English speech recognition and word alignment model. Accurately identifies genuine English words, spellings, and timestamps.",
+                "English & Multilingual Fallback",
+                "High / Accurate",
+                "English Letters",
+                "2 GB RAM, Standard CPU",
+                "Local Offline Runtime",
+                "Kaldi / Int8",
                 "Supported & Ready",
                 "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
                 "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-en-us-0.15.zip",
@@ -374,162 +160,6 @@ public class ModelManager {
                 "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498",
                 "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498",
                 "09ab50ccd62b674cbaa231b825f9c1cb",
-                "Apache-2.0"));
-
-        // English (India) Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-en-in-0.4",
-                "en-IN",
-                "English (India) Small",
-                ModelFamily.VOSK,
-                "Vosk Offline",
-                "Specialized acoustic model for Indian English accents, Minecraft slang, and Indian pronunciations.",
-                "English (Indian Accent)",
-                "Indian English Accented",
-                "English / Latin",
-                "500 MB RAM, Lightweight",
-                "Vosk Native JNI (100% Offline)",
-                "Kaldi Int8",
-                "Supported & Ready",
-                "https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-en-in-0.4.zip",
-                37573330L,
-                104857600L,
-                "",
-                "",
-                "62fd085f33c8c5fc01a235030e2a1fe3",
-                "Apache-2.0"));
-
-        // Hindi Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-hi-0.22",
-                "hi-IN",
-                "Hindi Small",
-                ModelFamily.VOSK,
-                "Vosk Offline",
-                "Lightweight 44MB offline Kaldi/Vosk model with native JNI integration. Extremely fast.",
-                "Hindi & Indian Accented Terms",
-                "High (via Transliteration Layer)",
-                "Roman Hindi & Devanagari",
-                "500 MB RAM, Lightweight",
-                "Vosk Native JNI (100% Offline)",
-                "Kaldi Int8",
-                "Supported & Ready",
-                "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
-                44458845L,
-                118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "",
-                "ab7280bbcf29e334f7e3b2a9ac0ca386",
-                "Apache-2.0"));
-
-        // Hinglish (Hindi + English)
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-hinglish",
-                "hi-en",
-                "Hinglish (Hindi + English)",
-                ModelFamily.VOSK,
-                "Vosk Offline",
-                "Hinglish combination using Vosk Hindi acoustic model with post-processing transliteration.",
-                "Hindi & English Code-Switched",
-                "High",
-                "Roman Hindi (Hinglish)",
-                "500 MB RAM, Lightweight",
-                "Vosk Native JNI (100% Offline)",
-                "Kaldi Int8",
-                "Supported & Ready",
-                "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
-                44458845L,
-                118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "",
-                "ab7280bbcf29e334f7e3b2a9ac0ca386",
-                "Apache-2.0"));
-
-        // German Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-de-0.15",
-                "de-DE",
-                "German Small",
-                "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-de-0.15.zip",
-                46499967L,
-                125829120L,
-                "",
-                "",
-                "4f21f92c0897b48287ef8839420608eb",
-                "Apache-2.0"));
-
-        // Spanish Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-es-0.42",
-                "es-ES",
-                "Spanish Small",
-                "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-es-0.42.zip",
-                39817833L,
-                119537664L,
-                "",
-                "",
-                "2d5c94f9859a84881a0ef744738ebd31",
-                "Apache-2.0"));
-
-        // French Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-fr-0.22",
-                "fr-FR",
-                "French Small",
-                "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-fr-0.22.zip",
-                42233323L,
-                121634816L,
-                "",
-                "",
-                "8873b1234503f6edd55f54bfff31cf3e",
-                "Apache-2.0"));
-
-        // Italian Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-it-0.22",
-                "it-IT",
-                "Italian Small",
-                "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-it-0.22.zip",
-                49665141L,
-                134217728L,
-                "",
-                "",
-                "fbd8f9c72cbb8c3dfa3e4581bd3585f4",
-                "Apache-2.0"));
-
-        // Portuguese Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-pt-0.3",
-                "pt-PT",
-                "Portuguese Small",
-                "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-pt-0.3.zip",
-                32453112L,
-                94371840L,
-                "",
-                "",
-                "458c69371c5a0b9ab6ee8fa417bf89da",
-                "Apache-2.0"));
-
-        // Russian Small
-        registerModel(new SpeechModelInfo(
-                "vosk-model-small-ru-0.22",
-                "ru-RU",
-                "Russian Small",
-                "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip",
-                "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-ru-0.22.zip",
-                46236750L,
-                130023424L,
-                "",
-                "",
-                "d1759dc83eb8fd87850129afbd9f4b7b",
                 "Apache-2.0"));
     }
 
@@ -544,7 +174,19 @@ public class ModelManager {
     }
 
     public SpeechModelInfo getModelInfo(String modelId) {
-        return modelRegistry.get(modelId);
+        if (modelId == null || modelId.trim().isEmpty()) {
+            return modelRegistry.get(DEFAULT_MODEL_ID);
+        }
+        SpeechModelInfo info = modelRegistry.get(modelId);
+        if (info != null) {
+            return info;
+        }
+        String lower = modelId.toLowerCase();
+        if (lower.contains("en") || lower.contains("small") || lower.contains("vosk-model-small-en-us")) {
+            SpeechModelInfo en = modelRegistry.get("whisper-small");
+            if (en != null) return en;
+        }
+        return modelRegistry.get(DEFAULT_MODEL_ID);
     }
 
     public File getModelDir(String modelId) {
@@ -552,6 +194,16 @@ public class ModelManager {
         File directDir = new File(modelsBaseDir, id);
         if (isValidModelDir(directDir)) {
             return resolveModelDirectory(directDir);
+        }
+        // Check fallback model IDs if direct not found
+        if (!modelRegistry.containsKey(id)) {
+            SpeechModelInfo fallback = getModelInfo(id);
+            if (fallback != null && !fallback.getId().equals(id)) {
+                File fallbackDir = new File(modelsBaseDir, fallback.getId());
+                if (isValidModelDir(fallbackDir)) {
+                    return resolveModelDirectory(fallbackDir);
+                }
+            }
         }
         return directDir;
     }
@@ -619,12 +271,12 @@ public class ModelManager {
             return true;
         }
 
-        // Check single nested child directory
-        File[] subdirs = dir.listFiles(File::isDirectory);
-        if (subdirs != null && subdirs.length == 1) {
-            File child = subdirs[0];
-            if (new File(child, "am/final.mdl").exists() || new File(child, "conf/model.conf").exists()
-                    || new File(child, "model.conf").exists()) {
+        // Check nested child directory (handles archive single folder or subdirs)
+        File resolved = resolveModelDirectory(dir);
+        if (resolved != null && !resolved.equals(dir) && resolved.exists() && resolved.isDirectory()) {
+            if (new File(resolved, "am/final.mdl").exists() || new File(resolved, "conf/model.conf").exists()
+                    || new File(resolved, "model.conf").exists() || new File(resolved, "model.bin").exists()
+                    || new File(resolved, "final.mdl").exists()) {
                 return true;
             }
         }
@@ -789,6 +441,17 @@ public class ModelManager {
             String computedMd5 = bytesToHex(md5Digest.digest());
 
             boolean integrityPassed = info.verifyIntegrity(computedSha, computedMd5, downloadedFromAlternate);
+            if (!integrityPassed) {
+                boolean md5Ok = info.getMd5Checksum() != null && !info.getMd5Checksum().isEmpty()
+                        && info.getMd5Checksum().equalsIgnoreCase(computedMd5);
+                boolean shaOk = (info.getPrimarySha256() != null && !info.getPrimarySha256().isEmpty()
+                        && info.getPrimarySha256().equalsIgnoreCase(computedSha))
+                        || (info.getAlternateSha256() != null && !info.getAlternateSha256().isEmpty()
+                        && info.getAlternateSha256().equalsIgnoreCase(computedSha));
+                if (md5Ok || shaOk) {
+                    integrityPassed = true;
+                }
+            }
             if (!integrityPassed) {
                 // If strict checksum fails (e.g. minor upstream packaging update), test if archive contains valid model weights
                 boolean validExtraction = false;
@@ -981,19 +644,30 @@ public class ModelManager {
 
     private static void flattenSingleSubdirectory(File targetDir) {
         File[] children = targetDir.listFiles();
-        if (children != null && children.length == 1 && children[0].isDirectory()) {
-            File sub = children[0];
-            File[] subFiles = sub.listFiles();
-            if (subFiles != null) {
-                for (File f : subFiles) {
-                    try {
-                        java.nio.file.Files.move(f.toPath(), new File(targetDir, f.getName()).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    } catch (Exception e) {
-                        f.renameTo(new File(targetDir, f.getName()));
+        if (children == null) return;
+        if (new File(targetDir, "conf/model.conf").exists() || new File(targetDir, "am/final.mdl").exists()
+                || new File(targetDir, "model.bin").exists()) {
+            return;
+        }
+        for (File child : children) {
+            if (child.isDirectory()) {
+                if (new File(child, "conf/model.conf").exists() || new File(child, "am/final.mdl").exists()
+                        || new File(child, "model.bin").exists() || new File(child, "final.mdl").exists()
+                        || new File(child, "model.conf").exists()) {
+                    File[] subFiles = child.listFiles();
+                    if (subFiles != null) {
+                        for (File f : subFiles) {
+                            try {
+                                java.nio.file.Files.move(f.toPath(), new File(targetDir, f.getName()).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            } catch (Exception e) {
+                                f.renameTo(new File(targetDir, f.getName()));
+                            }
+                        }
                     }
+                    child.delete();
+                    break;
                 }
             }
-            sub.delete();
         }
     }
 

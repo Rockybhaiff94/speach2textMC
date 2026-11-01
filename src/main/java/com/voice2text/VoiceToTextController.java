@@ -60,6 +60,8 @@ public class VoiceToTextController implements RecognitionListener {
     private final boolean customEngineInjected;
 
     private SpeechRecognitionEngine speechEngine;
+    private volatile SpeechRecognitionEngine secondaryEngine;
+    private volatile String latestSecondaryEnglishResult = "";
     private AudioCaptureService audioCaptureService;
     private AudioSource audioSource;
 
@@ -258,7 +260,14 @@ public class VoiceToTextController implements RecognitionListener {
                     ((MicrophoneAudioSource) audioSource).setDeviceName(config.getSelectedMicrophone());
                 }
 
+                latestSecondaryEnglishResult = "";
                 speechEngine.start();
+                if (secondaryEngine != null && secondaryEngine.getState() == EngineState.READY) {
+                    try {
+                        secondaryEngine.start();
+                    } catch (Throwable ignored) {
+                    }
+                }
                 audioCaptureService.start();
                 active.set(true);
                 session.transitionToRecording();
@@ -292,6 +301,12 @@ public class VoiceToTextController implements RecognitionListener {
         }
         if (speechEngine != null) {
             speechEngine.stop();
+        }
+        if (secondaryEngine != null && secondaryEngine.isRunning()) {
+            try {
+                secondaryEngine.stop();
+            } catch (Throwable ignored) {
+            }
         }
 
         if (pending == KeyAction.CANCEL_DICTATION) {
@@ -357,6 +372,12 @@ public class VoiceToTextController implements RecognitionListener {
                 if (speechEngine != null) {
                     speechEngine.stop();
                 }
+                if (secondaryEngine != null && secondaryEngine.isRunning()) {
+                    try {
+                        secondaryEngine.stop();
+                    } catch (Throwable ignored) {
+                    }
+                }
 
                 // Await final result asynchronously if speech was active and callback not yet received
                 if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
@@ -402,6 +423,12 @@ public class VoiceToTextController implements RecognitionListener {
 
                 if (speechEngine != null) {
                     speechEngine.stop();
+                }
+                if (secondaryEngine != null && secondaryEngine.isRunning()) {
+                    try {
+                        secondaryEngine.stop();
+                    } catch (Throwable ignored) {
+                    }
                 }
 
                 if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
@@ -597,11 +624,12 @@ public class VoiceToTextController implements RecognitionListener {
 
         if (isRomanizedHinglishActive()) {
             String original = rawText;
-            rawText = com.voice2text.transcription.HinglishTransliterationService.transliterate(rawText);
+            String engText = latestSecondaryEnglishResult;
+            rawText = com.voice2text.transcription.DualModelAlignmentMerger.merge(rawText, engText);
             if (correctionService != null) {
                 rawText = correctionService.correctFinalizedText(rawText);
             }
-            logDiagnostic("ASR-Final", "Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
+            logDiagnostic("ASR-Final", "Raw: '" + original + "' + Eng: '" + engText + "' -> Merged: '" + rawText + "'");
         } else {
             if (correctionService != null) {
                 rawText = correctionService.correctFinalizedText(rawText);
@@ -794,6 +822,8 @@ public class VoiceToTextController implements RecognitionListener {
             }
             configManager.save(cfg);
 
+            initSecondaryEngine(modelId);
+
             statusMessage = "Ready";
             notifyStateChange();
             return true;
@@ -809,6 +839,49 @@ public class VoiceToTextController implements RecognitionListener {
         return engineManager;
     }
 
+    private void initSecondaryEngine(String activeId) {
+        if (customEngineInjected || modelManager == null) {
+            return;
+        }
+        try {
+            if (secondaryEngine != null) {
+                secondaryEngine.close();
+                secondaryEngine = null;
+            }
+            String secondaryId = "whisper-small".equals(activeId) ? "whisper-hindi2hinglish-apex" : "whisper-small";
+            if (modelManager.isModelInstalled(secondaryId)) {
+                File secDir = modelManager.getModelDir(secondaryId);
+                if (secDir != null && secDir.exists()) {
+                    SpeechRecognitionEngine secEng = new VoskSpeechEngine();
+                    secEng.initialize(secDir.getAbsolutePath());
+                    secEng.setListener(new RecognitionListener() {
+                        @Override
+                        public void onPartialResult(RecognitionResult result) {}
+
+                        @Override
+                        public void onFinalResult(RecognitionResult result) {
+                            if (result != null && result.getText() != null) {
+                                latestSecondaryEnglishResult = result.getText();
+                            }
+                        }
+
+                        @Override
+                        public void onError(String errorMessage, Throwable error) {}
+
+                        @Override
+                        public void onStateChanged(EngineState oldState, EngineState newState) {}
+                    });
+                    this.secondaryEngine = secEng;
+                    if (this.audioCaptureService != null) {
+                        this.audioCaptureService.setSecondaryEngine(secEng);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            this.secondaryEngine = null;
+        }
+    }
+
     public void shutdown() {
         active.set(false);
         if (currentSession != null && !currentSession.isFinished()) {
@@ -822,6 +895,13 @@ public class VoiceToTextController implements RecognitionListener {
         }
         if (speechEngine != null) {
             speechEngine.close();
+        }
+        if (secondaryEngine != null) {
+            try {
+                secondaryEngine.close();
+            } catch (Throwable ignored) {
+            }
+            secondaryEngine = null;
         }
         if (engineManager != null) {
             engineManager.closeAll();
