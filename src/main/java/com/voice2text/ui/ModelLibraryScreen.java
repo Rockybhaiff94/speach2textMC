@@ -148,18 +148,13 @@ public class ModelLibraryScreen extends Screen {
         for (SpeechModelInfo info : modelManager.getAvailableModels().values()) {
             // Category check
             if (!activeCategory.equalsIgnoreCase("All")) {
-                if (activeCategory.equalsIgnoreCase("Whisper") && info.getFamily() != ModelFamily.WHISPER) {
+                if (activeCategory.equalsIgnoreCase("Hindi / Hinglish")
+                        && info.getFamily() != ModelFamily.HINGLISH_SPECIALIZED
+                        && !info.getId().contains("hinglish") && !info.getLanguageCode().contains("hi")) {
                     continue;
                 }
-                if (activeCategory.equalsIgnoreCase("Hinglish") && info.getFamily() != ModelFamily.HINGLISH_SPECIALIZED
-                        && !info.getId().contains("hinglish") && !info.getLanguageCode().contains("hi-en")) {
-                    continue;
-                }
-                if (activeCategory.equalsIgnoreCase("Indic") && info.getFamily() != ModelFamily.INDIC_CONFORMER
-                        && info.getFamily() != ModelFamily.SHRUTI && !info.getId().contains("indic") && !info.getId().contains("shruti")) {
-                    continue;
-                }
-                if (activeCategory.equalsIgnoreCase("Vosk") && info.getFamily() != ModelFamily.VOSK) {
+                if (activeCategory.equalsIgnoreCase("English")
+                        && !info.getId().contains("small") && !info.getLanguageCode().contains("en")) {
                     continue;
                 }
             }
@@ -337,9 +332,9 @@ public class ModelLibraryScreen extends Screen {
         // 2. Category tab clicks
         int catY = containerY + 34 + 22;
         int catBtnH = 18;
-        int totalSpacing = 4 * 4;
-        int catBtnW = (containerW - 32 - totalSpacing) / 5;
-        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
+        String[] categories = new String[]{"All", "Hindi / Hinglish", "English"};
+        int totalSpacing = (categories.length - 1) * 4;
+        int catBtnW = (containerW - 32 - totalSpacing) / categories.length;
 
         if (mouseY >= catY && mouseY <= catY + catBtnH) {
             for (int i = 0; i < categories.length; i++) {
@@ -499,9 +494,9 @@ public class ModelLibraryScreen extends Screen {
         // Category Filter Tabs (High Contrast, Clear Visibility)
         int catY = searchY + 22;
         int catBtnH = 18;
-        int totalSpacing = 4 * 4;
-        int catBtnW = (containerW - 32 - totalSpacing) / 5;
-        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
+        String[] categories = new String[]{"All", "Hindi / Hinglish", "English"};
+        int totalSpacing = (categories.length - 1) * 4;
+        int catBtnW = (containerW - 32 - totalSpacing) / categories.length;
 
         for (int i = 0; i < categories.length; i++) {
             int btnX = searchX + (i * (catBtnW + 4));

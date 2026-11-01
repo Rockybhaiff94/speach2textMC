@@ -24,11 +24,11 @@ public class ModelLibraryScreenTest {
 
     @Test
     public void testModelDiscoveryAndRegistry() {
-        assertNotNull(modelManager.getModelInfo("whisper-large-v3-turbo"));
+        assertNotNull(modelManager.getModelInfo("whisper-small"));
         assertNotNull(modelManager.getModelInfo("whisper-hindi2hinglish-apex"));
         assertNotNull(modelManager.getModelInfo("vosk-model-small-hi-0.22"));
-        assertNotNull(modelManager.getModelInfo("shruti-asr-hi"));
-        assertNotNull(modelManager.getModelInfo("indicconformer-hi"));
+        assertNotNull(modelManager.getModelInfo("vosk-model-small-en-us-0.15"));
+        assertNotNull(modelManager.getModelInfo("whisper-large-v3-turbo"));
     }
 
     @Test

@@ -269,6 +269,7 @@ public class VoiceToTextController implements RecognitionListener {
                     }
                 }
                 audioCaptureService.start();
+                logDiagnostic("Mic-Activation", "Microphone opened on device: '" + config.getSelectedMicrophone() + "', Primary: " + loadedModelId + ", Secondary: " + (secondaryEngine != null ? "Active" : "None"));
                 active.set(true);
                 session.transitionToRecording();
                 statusMessage = "Listening...";
@@ -323,7 +324,7 @@ public class VoiceToTextController implements RecognitionListener {
         }
     }
 
-    private boolean diagnosticLoggingEnabled = Boolean.getBoolean("voice2text.debug");
+    private boolean diagnosticLoggingEnabled = true;
 
     public void setDiagnosticLoggingEnabled(boolean enabled) {
         this.diagnosticLoggingEnabled = enabled;

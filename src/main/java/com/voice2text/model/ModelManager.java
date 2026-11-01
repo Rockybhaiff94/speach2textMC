@@ -182,11 +182,18 @@ public class ModelManager {
             return info;
         }
         String lower = modelId.toLowerCase();
-        if (lower.contains("en") || lower.contains("small") || lower.contains("vosk-model-small-en-us")) {
+        if (lower.equals("whisper-small") || lower.startsWith("en") || lower.contains("vosk-model-small-en")
+                || lower.contains("-en") || lower.contains("tiny") || lower.contains("base") || lower.contains("small")) {
             SpeechModelInfo en = modelRegistry.get("whisper-small");
             if (en != null) return en;
         }
-        return modelRegistry.get(DEFAULT_MODEL_ID);
+        if (lower.equals("whisper-hindi2hinglish-apex") || lower.startsWith("hi") || lower.contains("vosk-model-small-hi")
+                || lower.contains("hinglish") || lower.contains("large") || lower.contains("turbo")
+                || lower.contains("shruti") || lower.contains("indic")) {
+            SpeechModelInfo hi = modelRegistry.get("whisper-hindi2hinglish-apex");
+            if (hi != null) return hi;
+        }
+        return null;
     }
 
     public File getModelDir(String modelId) {
@@ -195,15 +202,27 @@ public class ModelManager {
         if (isValidModelDir(directDir)) {
             return resolveModelDirectory(directDir);
         }
-        // Check fallback model IDs if direct not found
-        if (!modelRegistry.containsKey(id)) {
-            SpeechModelInfo fallback = getModelInfo(id);
-            if (fallback != null && !fallback.getId().equals(id)) {
-                File fallbackDir = new File(modelsBaseDir, fallback.getId());
-                if (isValidModelDir(fallbackDir)) {
-                    return resolveModelDirectory(fallbackDir);
-                }
+        // Check fallback model IDs
+        SpeechModelInfo fallback = getModelInfo(id);
+        if (fallback != null && !fallback.getId().equals(id)) {
+            File fallbackDir = new File(modelsBaseDir, fallback.getId());
+            if (isValidModelDir(fallbackDir)) {
+                return resolveModelDirectory(fallbackDir);
             }
+        }
+        // Check legacy directory names
+        String lowerId = id.toLowerCase();
+        if (lowerId.equals("whisper-small") || lowerId.startsWith("en") || lowerId.contains("vosk-model-small-en") || lowerId.contains("-en")) {
+            File legacyEn = new File(modelsBaseDir, "vosk-model-small-en-us-0.15");
+            if (isValidModelDir(legacyEn)) return resolveModelDirectory(legacyEn);
+            File whisperSmall = new File(modelsBaseDir, "whisper-small");
+            if (isValidModelDir(whisperSmall)) return resolveModelDirectory(whisperSmall);
+        }
+        if (lowerId.equals("whisper-hindi2hinglish-apex") || lowerId.startsWith("hi") || lowerId.contains("vosk-model-small-hi") || lowerId.contains("hinglish")) {
+            File legacyHi = new File(modelsBaseDir, "vosk-model-small-hi-0.22");
+            if (isValidModelDir(legacyHi)) return resolveModelDirectory(legacyHi);
+            File apexHi = new File(modelsBaseDir, "whisper-hindi2hinglish-apex");
+            if (isValidModelDir(apexHi)) return resolveModelDirectory(apexHi);
         }
         return directDir;
     }
@@ -241,7 +260,7 @@ public class ModelManager {
         if (modelId == null || modelId.trim().isEmpty()) {
             return false;
         }
-        File dir = new File(modelsBaseDir, modelId.trim());
+        File dir = getModelDir(modelId);
         return isValidModelDir(dir);
     }
 
@@ -345,7 +364,7 @@ public class ModelManager {
         }
 
         String modelId = info.getId();
-        File targetDir = new File(modelsBaseDir, modelId);
+        File targetDir = getModelDir(modelId);
 
         // Check if valid installation already exists
         if (isValidModelDir(targetDir)) {
