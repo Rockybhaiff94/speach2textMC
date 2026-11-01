@@ -272,7 +272,7 @@ public class ModelManager {
                 "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
                 44458845L,
                 132120576L,
-                "be07e048e1e599ad46341c08d2a135645097a508221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
                 "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "MIT / Open-weights"));
@@ -295,7 +295,7 @@ public class ModelManager {
                 "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
                 44458845L,
                 132120576L,
-                "be07e048e1e599ad46341c08d2a135645097a508221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
                 "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "MIT / Open-weights"));
@@ -321,7 +321,7 @@ public class ModelManager {
                 "",
                 44458845L,
                 118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a508221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
                 "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "Bhashini / MIT"));
@@ -344,7 +344,7 @@ public class ModelManager {
                 "",
                 44458845L,
                 118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a508221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
                 "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "AI4Bharat / MIT"));
@@ -419,7 +419,7 @@ public class ModelManager {
                 "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
                 44458845L,
                 118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a508221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
                 "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "Apache-2.0"));
@@ -443,7 +443,7 @@ public class ModelManager {
                 "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
                 44458845L,
                 118489088L,
-                "be07e048e1e599ad46341c08d2a135645097a508221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
                 "",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "Apache-2.0"));

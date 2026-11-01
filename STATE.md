@@ -96,6 +96,15 @@
   - 127 automated unit tests passing (100% success rate).
   - Built fresh release JAR: `voice2text-1.0.0+mc26.3.jar` (27.91 MB).
 
+- [x] **Phase 11: Checksum Typo Resolution & UI Layering Overhaul**:
+  - Resolved `Integrity check failed` error: Fixed mistyped character in SHA-256 hash (`...a508...` -> `...a538...`) in `ModelManager.java` for `whisper-hindi2hinglish-apex`, `whisper-hindi2hinglish-swift`, `shruti-hi`, `indicconformer-hi`, `vosk-model-small-hi-0.22`, and `vosk-model-small-hinglish`.
+  - Fixed UI button occlusion in `ModelLibraryScreen`:
+    - Inverted render order so the solid header and footer are drawn **on top** of the scrollable card viewport, completely preventing cards from bleeding over category buttons or hiding underneath the footer bar.
+    - Restyled category filter tabs (`All`, `Whisper`, `Hinglish`, `Indic`, `Vosk`) with high-contrast, modern borders and active indicators (`§a§l● `) for 100% clear visibility.
+    - Made card heights and button coordinates compact (`cardH = 84`, `btnY = y + 59`) so `Details`, `Download`/`Cancel`/`Remove`, and `Activate` buttons are consistently visible and interactive.
+    - Added floating notification pill capsule for download failure/success messages that never collides with card contents.
+    - Clarified uninstalled active engine status text: `(Not Installed - Click Download)`.
+
 ---
 
 ## 2. Verified Deliverables

@@ -80,7 +80,7 @@ public class ModelLibraryScreen extends Screen {
     }
 
     private int getContainerHeight() {
-        return Math.min(this.height - 16, Math.max(240, (int) (this.height * 0.85)));
+        return Math.min(this.height - 12, Math.max(240, (int) (this.height * 0.92)));
     }
 
     private int getContainerX() {
@@ -92,15 +92,15 @@ public class ModelLibraryScreen extends Screen {
     }
 
     private int getHeaderHeight() {
-        return 82;
+        return 80;
     }
 
     private int getListTop() {
-        return getContainerY() + getHeaderHeight() + 4;
+        return getContainerY() + getHeaderHeight() + 2;
     }
 
     private int getListBottom() {
-        return getContainerY() + getContainerHeight() - 30;
+        return getContainerY() + getContainerHeight() - 32;
     }
 
     @Override
@@ -183,9 +183,9 @@ public class ModelLibraryScreen extends Screen {
         int listTop = getListTop();
         int listBottom = getListBottom();
         int listHeight = listBottom - listTop;
-        int cardHeight = 88;
-        int cardGap = 8;
-        int totalContentHeight = displayedModels.size() * (cardHeight + cardGap) + 16;
+        int cardHeight = 84;
+        int cardGap = 6;
+        int totalContentHeight = displayedModels.size() * (cardHeight + cardGap) + 12;
         this.maxScroll = Math.max(0, totalContentHeight - listHeight);
         if (this.scrollOffset > this.maxScroll) {
             this.scrollOffset = this.maxScroll;
@@ -335,7 +335,7 @@ public class ModelLibraryScreen extends Screen {
         int containerY = getContainerY();
 
         // 2. Category tab clicks
-        int catY = containerY + 34 + 23;
+        int catY = containerY + 34 + 22;
         int catBtnH = 18;
         int totalSpacing = 4 * 4;
         int catBtnW = (containerW - 32 - totalSpacing) / 5;
@@ -358,8 +358,8 @@ public class ModelLibraryScreen extends Screen {
 
         int cardW = containerW - 32;
         int cardX = containerX + 16;
-        int cardH = 88;
-        int cardGap = 8;
+        int cardH = 84;
+        int cardGap = 6;
 
         if (mouseY >= listTop && mouseY <= listBottom && mouseX >= cardX && mouseX <= cardX + cardW) {
             int currentY = listTop - scrollOffset;
@@ -368,8 +368,8 @@ public class ModelLibraryScreen extends Screen {
                 if (mouseY >= currentY && mouseY <= currentY + cardH) {
                     this.selectedModelId = info.getId();
 
-                    int btnY = currentY + cardH - 23;
-                    int btnH = 17;
+                    int btnY = currentY + 59;
+                    int btnH = 18;
                     int btnDetailsX = cardX + cardW - 214;
                     int btnDownloadX = cardX + cardW - 156;
                     int btnActivateX = cardX + cardW - 80;
@@ -436,52 +436,11 @@ public class ModelLibraryScreen extends Screen {
         int containerX = getContainerX();
         int containerY = getContainerY();
 
-        // 1. Semi-transparent backdrop overlay
-        extractor.fill(0, 0, this.width, this.height, 0x90000000);
-
-        // 2. Main Centered Container Panel
-        extractor.fill(containerX, containerY, containerX + containerW, containerY + containerH, 0xF0121417);
-        drawContainerBorder(extractor, containerX, containerY, containerW, containerH);
-
-        // 3. Fixed Solid Header Bar (Height: 82)
         int headerH = getHeaderHeight();
         int headerBottom = containerY + headerH;
-        extractor.fill(containerX + 1, containerY + 1, containerX + containerW - 1, headerBottom, 0xF516191E);
-        extractor.fill(containerX + 1, headerBottom, containerX + containerW - 1, headerBottom + 1, 0xFF2A2E35);
+        int footerH = 28;
+        int footerY = containerY + containerH - footerH;
 
-        // Header Title & Subtitle
-        extractor.centeredText(this.font, "§lLanguage & Model Library", centerX, containerY + 8, 0xFFFFFFFF);
-        extractor.centeredText(this.font, "§7Select, download, and activate verified offline speech engines", centerX, containerY + 20, 0xFFA0B0BE);
-
-        // Search Box background frame
-        int searchW = containerW - 32;
-        int searchX = containerX + 16;
-        int searchY = containerY + 34;
-        extractor.fill(searchX - 1, searchY - 1, searchX + searchW + 1, searchY + 19, 0xFF0E1013);
-        drawBorder(extractor, searchX - 1, searchY - 1, searchW + 2, 20, searchBox != null && searchBox.isFocused() ? 0xFF29B6F6 : 0xFF353C48);
-
-        // Category Filter Tabs
-        int catY = searchY + 23;
-        int catBtnH = 18;
-        int totalSpacing = 4 * 4;
-        int catBtnW = (containerW - 32 - totalSpacing) / 5;
-        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
-
-        for (int i = 0; i < categories.length; i++) {
-            int btnX = searchX + (i * (catBtnW + 4));
-            boolean isSelected = activeCategory.equalsIgnoreCase(categories[i]);
-            boolean hovered = mouseX >= btnX && mouseX <= btnX + catBtnW && mouseY >= catY && mouseY <= catY + catBtnH;
-
-            int tabBg = isSelected ? 0xFF1E3A2F : (hovered ? 0xFF262C35 : 0xFF191C22);
-            int tabBorder = isSelected ? 0xFF4CAF50 : (hovered ? 0xFF8FA0B5 : 0xFF353C48);
-            extractor.fill(btnX, catY, btnX + catBtnW, catY + catBtnH, tabBg);
-            drawBorder(extractor, btnX, catY, catBtnW, catBtnH, tabBorder);
-
-            String tabLabel = isSelected ? ("§a§l" + categories[i]) : (hovered ? ("§f" + categories[i]) : ("§7" + categories[i]));
-            extractor.centeredText(this.font, tabLabel, btnX + (catBtnW / 2), catY + 5, 0xFFFFFFFF);
-        }
-
-        // 4. Scrollable Model Cards with Scissor Clipping
         int listTop = getListTop();
         int listBottom = getListBottom();
         int listLeft = containerX + 12;
@@ -489,8 +448,18 @@ public class ModelLibraryScreen extends Screen {
 
         int cardW = containerW - 32;
         int cardX = containerX + 16;
-        int cardH = 88;
-        int cardGap = 8;
+        int cardH = 84;
+        int cardGap = 6;
+
+        // 1. Semi-transparent backdrop overlay
+        extractor.fill(0, 0, this.width, this.height, 0xA0000000);
+
+        // 2. Main Centered Container Panel Base
+        extractor.fill(containerX, containerY, containerX + containerW, containerY + containerH, 0xF5121418);
+        drawContainerBorder(extractor, containerX, containerY, containerW, containerH);
+
+        // 3. Scrollable Model Cards Viewport (Rendered FIRST so header & footer cleanly cover them)
+        extractor.fill(containerX + 1, listTop, containerX + containerW - 1, listBottom, 0xFF0E1014);
 
         extractor.enableScissor(listLeft, listTop, listRight, listBottom);
 
@@ -504,39 +473,81 @@ public class ModelLibraryScreen extends Screen {
 
         extractor.disableScissor();
 
-        // 5. Gradient Fades at Scrollable Edges
+        // 4. Subtle Edge Gradient Fades
         if (scrollOffset > 0) {
-            extractor.fillGradient(listLeft, listTop, listRight, listTop + 14, 0xF516191E, 0x0016191E);
+            extractor.fillGradient(listLeft, listTop, listRight, listTop + 10, 0xF514171E, 0x0014171E);
         }
         if (scrollOffset < maxScroll) {
-            extractor.fillGradient(listLeft, listBottom - 14, listRight, listBottom, 0x0014171A, 0xF514171A);
+            extractor.fillGradient(listLeft, listBottom - 10, listRight, listBottom, 0x0014171E, 0xF514171E);
         }
 
-        // 6. Fixed Footer Area
-        int footerH = 28;
-        int footerY = containerY + containerH - footerH;
+        // 5. Fixed Solid Opaque Header Bar (Rendered AFTER cards so cards scroll behind it cleanly)
+        extractor.fill(containerX + 1, containerY + 1, containerX + containerW - 1, headerBottom, 0xFF161920);
+        extractor.fill(containerX + 1, headerBottom, containerX + containerW - 1, headerBottom + 1, 0xFF2D3540);
 
-        extractor.fill(containerX + 1, footerY, containerX + containerW - 1, containerY + containerH - 1, 0xF514171A);
-        extractor.fill(containerX + 1, footerY, containerX + containerW - 1, footerY + 1, 0xFF2A2E35);
+        // Header Title & Subtitle
+        extractor.centeredText(this.font, "§lLanguage & Model Library", centerX, containerY + 7, 0xFFFFFFFF);
+        extractor.centeredText(this.font, "§7Select, download, and activate verified offline speech engines", centerX, containerY + 19, 0xFFA0B0BE);
+
+        // Search Box background frame
+        int searchW = containerW - 32;
+        int searchX = containerX + 16;
+        int searchY = containerY + 34;
+        extractor.fill(searchX - 1, searchY - 1, searchX + searchW + 1, searchY + 19, 0xFF0B0D11);
+        drawBorder(extractor, searchX - 1, searchY - 1, searchW + 2, 20, searchBox != null && searchBox.isFocused() ? 0xFF38BDF8 : 0xFF3F4B5B);
+
+        // Category Filter Tabs (High Contrast, Clear Visibility)
+        int catY = searchY + 22;
+        int catBtnH = 18;
+        int totalSpacing = 4 * 4;
+        int catBtnW = (containerW - 32 - totalSpacing) / 5;
+        String[] categories = new String[]{"All", "Whisper", "Hinglish", "Indic", "Vosk"};
+
+        for (int i = 0; i < categories.length; i++) {
+            int btnX = searchX + (i * (catBtnW + 4));
+            boolean isSelected = activeCategory.equalsIgnoreCase(categories[i]);
+            boolean hovered = mouseX >= btnX && mouseX <= btnX + catBtnW && mouseY >= catY && mouseY <= catY + catBtnH;
+
+            int tabBg = isSelected ? 0xFF143826 : (hovered ? 0xFF2D3748 : 0xFF202632);
+            int tabBorder = isSelected ? 0xFF22C55E : (hovered ? 0xFF60A5FA : 0xFF3D4758);
+            extractor.fill(btnX, catY, btnX + catBtnW, catY + catBtnH, tabBg);
+            drawBorder(extractor, btnX, catY, catBtnW, catBtnH, tabBorder);
+
+            String tabLabel = isSelected ? ("§a§l● " + categories[i]) : (hovered ? ("§b" + categories[i]) : ("§f" + categories[i]));
+            extractor.centeredText(this.font, tabLabel, btnX + (catBtnW / 2), catY + 5, 0xFFFFFFFF);
+        }
+
+        // 6. Fixed Solid Opaque Footer Area (Rendered AFTER cards so cards scroll behind it cleanly)
+        extractor.fill(containerX + 1, footerY, containerX + containerW - 1, containerY + containerH - 1, 0xFF161920);
+        extractor.fill(containerX + 1, footerY, containerX + containerW - 1, footerY + 1, 0xFF2D3540);
 
         // Active Model Status Indicator on Left of Footer
         SpeechModelInfo activeInfo = modelManager != null ? modelManager.getModelInfo(config.getActiveModelId()) : null;
         String activeName = activeInfo != null ? activeInfo.getDisplayName() : config.getActiveModelId();
         boolean activeInstalled = modelManager != null && modelManager.isModelInstalled(config.getActiveModelId());
         String activeText = activeInstalled
-                ? "§8Active Engine: §a● §f" + activeName
-                : "§8Active Engine: §e⚠ §7" + activeName + " §c(Not Downloaded)";
-        extractor.text(this.font, activeText, containerX + 16, footerY + 7, 0xFFFFFFFF, true);
+                ? "§7Active Engine: §a● §f" + activeName
+                : "§7Active Engine: §e⚠ §e" + activeName + " §c(Not Installed - Click Download)";
+        extractor.text(this.font, activeText, containerX + 16, footerY + 8, 0xFFFFFFFF, true);
 
-        // Status Banner Notification
-        if (!statusBanner.isEmpty() && System.currentTimeMillis() - statusBannerTime < 4000) {
-            extractor.centeredText(this.font, statusBanner, centerX, footerY - 14, 0xFFFFFFFF);
+        // 7. Status Banner Notification Capsule (Floating prominently above footer)
+        if (!statusBanner.isEmpty() && System.currentTimeMillis() - statusBannerTime < 6000) {
+            int bannerW = Math.min(containerW - 32, this.font.width(statusBanner) + 20);
+            int bannerX = centerX - (bannerW / 2);
+            int bannerY = footerY - 22;
+            int bannerH = 16;
+            boolean isError = statusBanner.contains("§c") || statusBanner.toLowerCase().contains("failed") || statusBanner.toLowerCase().contains("error");
+            int bannerBg = isError ? 0xF23B1111 : 0xF2113B1E;
+            int bannerBorder = isError ? 0xFFEF4444 : 0xFF22C55E;
+            extractor.fill(bannerX, bannerY, bannerX + bannerW, bannerY + bannerH, bannerBg);
+            drawBorder(extractor, bannerX, bannerY, bannerW, bannerH, bannerBorder);
+            extractor.centeredText(this.font, statusBanner, centerX, bannerY + 4, 0xFFFFFFFF);
         }
 
-        // 7. Render interactive widgets (search box, Back button) ON TOP of container
+        // 8. Render interactive widgets (Search box, Back button) ON TOP of everything
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
 
-        // 8. Render Details Modal Popup if open
+        // 9. Render Details Modal Popup if open
         if (modalDetailsModel != null) {
             renderDetailsModal(extractor, modalDetailsModel, mouseX, mouseY);
         }
@@ -550,17 +561,17 @@ public class ModelLibraryScreen extends Screen {
         boolean isDownloading = info.getId().equals(downloadingModelId);
 
         // Background color
-        int bgColor = isSelected ? 0xF01D2735 : (isHovered ? 0xF01E2228 : 0xF016181D);
+        int bgColor = isSelected ? 0xFF1C2534 : (isHovered ? 0xFF1B202A : 0xFF14171E);
         extractor.fill(x, y, x + w, y + h, bgColor);
 
         // Border color: Green for Active, Cyan for Selected, Subtle for normal
-        int borderColor = isActive ? 0xFF4CAF50 : (isSelected ? 0xFF29B6F6 : (isHovered ? 0xFF657080 : 0xFF2D333D));
+        int borderColor = isActive ? 0xFF22C55E : (isSelected ? 0xFF38BDF8 : (isHovered ? 0xFF60A5FA : 0xFF2D3540));
         drawBorder(extractor, x, y, w, h, borderColor);
 
-        // 1. Top Section (y + 6): Name, Family & Status Badge
+        // 1. Top Section (y + 5): Name, Family & Status Badge
         String title = "§f§l" + info.getDisplayName();
         String familyBadge = " §7[" + info.getFamily().getDisplayTitle() + "]";
-        extractor.text(this.font, title + familyBadge, x + 10, y + 6, 0xFFFFFFFF, true);
+        extractor.text(this.font, title + familyBadge, x + 8, y + 5, 0xFFFFFFFF, true);
 
         String badge;
         int badgeColor;
@@ -577,46 +588,46 @@ public class ModelLibraryScreen extends Screen {
             badge = "§7[NOT INSTALLED]";
             badgeColor = 0xFFAAAAAA;
         }
-        int badgeX = x + w - this.font.width(badge) - 10;
-        extractor.text(this.font, badge, badgeX, y + 6, badgeColor, true);
+        int badgeX = x + w - this.font.width(badge) - 8;
+        extractor.text(this.font, badge, badgeX, y + 5, badgeColor, true);
 
-        // 2. Description (y + 21)
+        // 2. Description (y + 18)
         String desc = info.getShortDescription();
-        int maxDescW = w - 20;
+        int maxDescW = w - 16;
         if (this.font.width(desc) > maxDescW) {
-            desc = this.font.plainSubstrByWidth(desc, maxDescW - 12) + "...";
+            desc = this.font.plainSubstrByWidth(desc, maxDescW - 10) + "...";
         }
-        extractor.text(this.font, "§7" + desc, x + 10, y + 21, 0xFFD0D7DE, true);
+        extractor.text(this.font, "§7" + desc, x + 8, y + 18, 0xFFCBD5E1, true);
 
-        // 3. Information Section (y + 36, y + 50)
+        // 3. Information Section (y + 31, y + 44)
         String line1 = "§7Languages: §f" + info.getSupportedLanguages() + "  §8|  §7Accuracy: §e" + info.getHinglishSupport() + "  §8|  §7Format: §f" + info.getOutputScript();
-        if (this.font.width(line1) > w - 20) {
-            line1 = this.font.plainSubstrByWidth(line1, w - 28) + "...";
+        if (this.font.width(line1) > w - 16) {
+            line1 = this.font.plainSubstrByWidth(line1, w - 24) + "...";
         }
-        extractor.text(this.font, line1, x + 10, y + 36, 0xFFB0BAC5, true);
+        extractor.text(this.font, line1, x + 8, y + 31, 0xFF94A3B8, true);
 
         String line2 = "§7Download: §b" + info.getFormattedDownloadSize() + "  §8|  §7Specs: §6" + info.getHardwareRequirements();
-        if (this.font.width(line2) > w - 20) {
-            line2 = this.font.plainSubstrByWidth(line2, w - 28) + "...";
+        if (this.font.width(line2) > w - 16) {
+            line2 = this.font.plainSubstrByWidth(line2, w - 24) + "...";
         }
-        extractor.text(this.font, line2, x + 10, y + 50, 0xFF909AA5, true);
+        extractor.text(this.font, line2, x + 8, y + 44, 0xFF64748B, true);
 
-        // 4. Action Section (y + h - 23, height 17)
-        int btnY = y + h - 23;
-        int btnH = 17;
+        // 4. Action Section (y + 59, height 18)
+        int btnY = y + 59;
+        int btnH = 18;
 
         // Download progress bar on left if downloading
         if (isDownloading) {
-            int pbX = x + 10;
+            int pbX = x + 8;
             int pbY = btnY + 3;
             int pbW = w - 230;
-            int pbH = 11;
-            extractor.fill(pbX, pbY, pbX + pbW, pbY + pbH, 0xFF14171A);
+            int pbH = 12;
+            extractor.fill(pbX, pbY, pbX + pbW, pbY + pbH, 0xFF0F172A);
             if (downloadPercent > 0) {
                 int fillW = (int) ((pbW * downloadPercent) / 100.0);
-                extractor.fill(pbX, pbY, pbX + fillW, pbY + pbH, 0xFFFFAA00);
+                extractor.fill(pbX, pbY, pbX + fillW, pbY + pbH, 0xFFF59E0B);
             }
-            drawBorder(extractor, pbX, pbY, pbW, pbH, 0xFF555555);
+            drawBorder(extractor, pbX, pbY, pbW, pbH, 0xFF475569);
 
             String progressText = downloadStatusMessage != null && !downloadStatusMessage.isEmpty()
                     ? downloadStatusMessage
@@ -628,35 +639,35 @@ public class ModelLibraryScreen extends Screen {
 
         // Details Button (width: 54)
         int btnDetailsX = x + w - 214;
-        renderMiniButton(extractor, "Details", btnDetailsX, btnY, 54, btnH, mouseX, mouseY, 0xFF353A42);
+        renderMiniButton(extractor, "Details", btnDetailsX, btnY, 54, btnH, mouseX, mouseY, 0xFF334155);
 
         // Download / Cancel / Remove Button (width: 72)
         int btnDownloadX = x + w - 156;
         if (isDownloading) {
-            renderMiniButton(extractor, "§cCancel", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF6B1D1D);
+            renderMiniButton(extractor, "§cCancel", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF991B1B);
         } else if (!isInstalled) {
-            renderMiniButton(extractor, "§6Download", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF8A5012);
+            renderMiniButton(extractor, "§6Download", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFFB45309);
         } else {
-            renderMiniButton(extractor, "§7Remove", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF2A2D33);
+            renderMiniButton(extractor, "§7Remove", btnDownloadX, btnY, 72, btnH, mouseX, mouseY, 0xFF374151);
         }
 
         // Activate / Active Button (width: 72)
         int btnActivateX = x + w - 80;
         if (isActive) {
-            renderMiniButton(extractor, "§aActive ✓", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1B5E20);
+            renderMiniButton(extractor, "§aActive ✓", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF15803D);
         } else if (isInstalled) {
-            renderMiniButton(extractor, "§fActivate", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1976D2);
+            renderMiniButton(extractor, "§fActivate", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1D4ED8);
         } else {
-            renderMiniButton(extractor, "§8Inactive", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1A1C20);
+            renderMiniButton(extractor, "§8Inactive", btnActivateX, btnY, 72, btnH, mouseX, mouseY, 0xFF1F2937);
         }
     }
 
     private void renderMiniButton(GuiGraphicsExtractor extractor, String label, int x, int y, int w, int h, int mouseX, int mouseY, int baseColor) {
         boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
-        int color = hovered ? (baseColor + 0x00151515) : baseColor;
+        int color = hovered ? (baseColor + 0x00202020) : baseColor;
         extractor.fill(x, y, x + w, y + h, color | 0xFF000000);
-        drawBorder(extractor, x, y, w, h, hovered ? 0xFFFFFFFF : 0xFF4A525D);
-        extractor.centeredText(this.font, label, x + (w / 2), y + 4, 0xFFFFFFFF);
+        drawBorder(extractor, x, y, w, h, hovered ? 0xFFFFFFFF : 0xFF475569);
+        extractor.centeredText(this.font, label, x + (w / 2), y + 5, 0xFFFFFFFF);
     }
 
     private void renderDetailsModal(GuiGraphicsExtractor extractor, SpeechModelInfo info, int mouseX, int mouseY) {
