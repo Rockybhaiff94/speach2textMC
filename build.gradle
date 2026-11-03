@@ -30,6 +30,7 @@ dependencies {
     // Speech Recognition & Audio bundled directly into the distribution JAR
     bundle 'com.alphacephei:vosk:0.3.45'
     bundle 'net.java.dev.jna:jna:5.14.0'
+    bundle 'io.github.givimad:whisper-jni:1.7.1'
     implementation 'com.google.code.gson:gson:2.11.0'
 
     // Testing

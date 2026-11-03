@@ -11,18 +11,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
- * Service managing background thread audio capture, streaming to SpeechRecognitionEngine,
+ * Service managing background thread audio capture, streaming to
+ * SpeechRecognitionEngine,
  * and dispatching real-time audio levels for UI visualization.
  *
  * Performance enhancements:
  * - Decoupled capture and recognition threads with a bounded audio queue.
- * - Explicit backpressure handling: drops oldest non-essential frames if recognition lags,
- *   preventing unbounded memory growth or audio hardware buffer overflow.
+ * - Explicit backpressure handling: drops oldest non-essential frames if
+ * recognition lags,
+ * preventing unbounded memory growth or audio hardware buffer overflow.
  */
 public class AudioCaptureService {
 
     private static final int BUFFER_SIZE_BYTES = 1024; // ~32 ms of 16kHz 16-bit mono for responsive audio levels
-    public static final int MAX_QUEUE_CAPACITY = 32;   // ~1 second of buffered audio
+    public static final int MAX_QUEUE_CAPACITY = 32; // ~1 second of buffered audio
 
     private final AudioSource audioSource;
     private final AudioLevelMeter levelMeter;
@@ -168,11 +170,27 @@ public class AudioCaptureService {
         running.set(false);
         if (captureThread != null) {
             captureThread.interrupt();
+            try {
+                captureThread.join(100);
+            } catch (InterruptedException ignored) {
+            }
         }
+
+        // Flush any remaining buffered speech chunks to ensure no trailing words are
+        // clipped
+        byte[] chunk;
+        while ((chunk = audioQueue.poll()) != null) {
+            if (speechEngine != null && speechEngine.isRunning()) {
+                speechEngine.acceptAudio(chunk, chunk.length);
+            }
+            if (secondaryEngine != null && secondaryEngine.isRunning()) {
+                secondaryEngine.acceptAudio(chunk, chunk.length);
+            }
+        }
+
         if (processingThread != null) {
             processingThread.interrupt();
         }
-        audioQueue.clear();
         cleanup();
     }
 

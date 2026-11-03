@@ -9,6 +9,7 @@ import com.voice2text.config.VoiceToTextConfig;
 import com.voice2text.input.InputStateMachine;
 import com.voice2text.input.KeyAction;
 import com.voice2text.input.KeybindManager;
+import com.voice2text.model.ModelFamily;
 import com.voice2text.model.ModelManager;
 import com.voice2text.model.SpeechModelInfo;
 import com.voice2text.session.RecordingSession;
@@ -222,7 +223,7 @@ public class VoiceToTextController implements RecognitionListener {
 
         // Snapshot configuration at recording start
         boolean autoSendSnapshot = config.isAutomaticSend();
-        String currentDraft = chatBridge.isChatOpen() ? chatBridge.getChatInput() : "";
+        String currentDraft = autoSendSnapshot ? "" : (chatBridge.isChatOpen() ? chatBridge.getChatInput() : "");
 
         long sessionId = sessionIdCounter.getAndIncrement();
         RecordingSession session = new RecordingSession(sessionId, autoSendSnapshot, currentDraft);
@@ -470,6 +471,7 @@ public class VoiceToTextController implements RecognitionListener {
                     logDiagnostic("Chat-Submission", "Submitting message to Minecraft chat: '" + toSend + "'");
                     clientThreadExecutor.execute(() -> {
                         chatBridge.sendChatMessage(toSend);
+                        chatBridge.updateChatInput("");
                     });
                 }
             } else {
@@ -853,7 +855,8 @@ public class VoiceToTextController implements RecognitionListener {
             if (modelManager.isModelInstalled(secondaryId)) {
                 File secDir = modelManager.getModelDir(secondaryId);
                 if (secDir != null && secDir.exists()) {
-                    SpeechRecognitionEngine secEng = new VoskSpeechEngine();
+                    SpeechModelInfo secInfo = modelManager.getModelInfo(secondaryId);
+                    SpeechRecognitionEngine secEng = engineManager.instantiateEngine(secInfo != null ? secInfo.getFamily() : ModelFamily.VOSK);
                     secEng.initialize(secDir.getAbsolutePath());
                     secEng.setListener(new RecognitionListener() {
                         @Override

@@ -729,14 +729,11 @@ public class ModelManager {
                 }
             }
         } else {
-            try (InputStream in = new FileInputStream(src);
-                    FileOutputStream out = new FileOutputStream(dest)) {
-                byte[] buf = new byte[8192];
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                }
+            File parent = dest.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
             }
+            java.nio.file.Files.copy(src.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
