@@ -2,7 +2,6 @@ package com.voice2text.transcription;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -347,11 +346,6 @@ public class DualModelAlignmentMerger {
     }
 
     private static List<String> reconcileMissingEnglishClauses(List<String> currentTokens, List<String> englishTokens, String originalEnglish) {
-        // If English started with a clear polite opener like "Can you please help me" or "Hello"
-        // and current tokens have "kain yu..." or missing, verify leading/trailing clauses
-        String currentJoined = String.join(" ", currentTokens).toLowerCase(Locale.ROOT);
-        String engLower = originalEnglish.toLowerCase(Locale.ROOT);
-
         // Check if original English contains repeated words that need natural preservation (e.g. "I, I, I")
         if (originalEnglish.matches(".*\\b([A-Za-z]+)(?:,\\s*\\1)+\\b.*")) {
             Pattern repPattern = Pattern.compile("(?i)\\b([A-Za-z]+)(?:,\\s*\\1)+\\b");

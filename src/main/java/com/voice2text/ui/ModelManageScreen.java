@@ -59,11 +59,9 @@ public class ModelManageScreen extends Screen {
         clearWidgets();
 
         int centerX = this.width / 2;
-        int dialogW = 320;
         int btnW = 145;
         int btnH = 20;
 
-        SpeechModelInfo info = modelManager.getModelInfo(modelId);
         boolean isInstalled = modelManager.isModelInstalled(modelId);
         boolean isActive = modelId.equals(config.getActiveModelId());
 
@@ -216,7 +214,7 @@ public class ModelManageScreen extends Screen {
         }
 
         // 2. Perform deletion
-        boolean deleted = modelManager.deleteModel(modelId);
+        modelManager.deleteModel(modelId);
 
         // 3. Fallback switching if deleted model was active
         if (wasActive) {
@@ -248,7 +246,6 @@ public class ModelManageScreen extends Screen {
 
         SpeechModelInfo info = modelManager.getModelInfo(modelId);
         String displayName = info != null ? info.getDisplayName() : modelId;
-        boolean isInstalled = modelManager.isModelInstalled(modelId);
         boolean isActive = modelId.equals(config.getActiveModelId());
 
         if (currentMode == ScreenMode.CONFIRM_DELETE) {

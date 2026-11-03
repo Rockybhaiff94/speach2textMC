@@ -697,18 +697,16 @@ public class ModelManager {
         String id = modelId.trim();
         setModelState(id, ModelInstallationState.DELETING, null);
 
-        boolean anyDeleted = false;
-
         // 1. Delete resolved directory
         File targetDir = getModelDir(id);
         if (targetDir != null && targetDir.exists()) {
-            anyDeleted |= deleteRecursively(targetDir);
+            deleteRecursively(targetDir);
         }
 
         // 2. Also delete direct named folder if different
         File directDir = new File(modelsBaseDir, id);
         if (directDir.exists() && !directDir.equals(targetDir)) {
-            anyDeleted |= deleteRecursively(directDir);
+            deleteRecursively(directDir);
         }
 
         // 3. Clean up any leftover partial downloads matching this model ID
