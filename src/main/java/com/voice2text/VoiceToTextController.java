@@ -261,13 +261,25 @@ public class VoiceToTextController implements RecognitionListener {
                     ((MicrophoneAudioSource) audioSource).setDeviceName(config.getSelectedMicrophone());
                 }
 
+                if (secondaryEngine == null && !customEngineInjected) {
+                    initSecondaryEngine(modelId);
+                }
+
                 latestSecondaryEnglishResult = "";
                 speechEngine.start();
-                if (secondaryEngine != null && secondaryEngine.getState() == EngineState.READY) {
-                    try {
-                        secondaryEngine.start();
-                    } catch (Throwable ignored) {
+                if (secondaryEngine != null) {
+                    if (secondaryEngine.getState() == EngineState.UNINITIALIZED || secondaryEngine.getState() == EngineState.CLOSED) {
+                        initSecondaryEngine(modelId);
                     }
+                    if (secondaryEngine != null && (secondaryEngine.getState() == EngineState.READY || secondaryEngine.getState() == EngineState.FINALIZING)) {
+                        try {
+                            secondaryEngine.start();
+                        } catch (Throwable ignored) {
+                        }
+                    }
+                }
+                if (audioCaptureService != null && secondaryEngine != null && audioCaptureService.getSecondaryEngine() != secondaryEngine) {
+                    audioCaptureService.setSecondaryEngine(secondaryEngine);
                 }
                 audioCaptureService.start();
                 logDiagnostic("Mic-Activation", "Microphone opened on device: '" + config.getSelectedMicrophone() + "', Primary: " + loadedModelId + ", Secondary: " + (secondaryEngine != null ? "Active" : "None"));
@@ -371,14 +383,16 @@ public class VoiceToTextController implements RecognitionListener {
                     audioCaptureService.stop();
                 }
 
-                if (speechEngine != null) {
-                    speechEngine.stop();
-                }
+                // Stop secondary engine first so it finalizes and populates latestSecondaryEnglishResult
                 if (secondaryEngine != null && secondaryEngine.isRunning()) {
                     try {
                         secondaryEngine.stop();
                     } catch (Throwable ignored) {
                     }
+                }
+
+                if (speechEngine != null) {
+                    speechEngine.stop();
                 }
 
                 // Await final result asynchronously if speech was active and callback not yet received
@@ -423,14 +437,16 @@ public class VoiceToTextController implements RecognitionListener {
                     audioCaptureService.stop();
                 }
 
-                if (speechEngine != null) {
-                    speechEngine.stop();
-                }
+                // Stop secondary engine first so it finalizes and populates latestSecondaryEnglishResult
                 if (secondaryEngine != null && secondaryEngine.isRunning()) {
                     try {
                         secondaryEngine.stop();
                     } catch (Throwable ignored) {
                     }
+                }
+
+                if (speechEngine != null) {
+                    speechEngine.stop();
                 }
 
                 if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
@@ -888,11 +904,15 @@ public class VoiceToTextController implements RecognitionListener {
                     secEng.initialize(secDir.getAbsolutePath());
                     secEng.setListener(new RecognitionListener() {
                         @Override
-                        public void onPartialResult(RecognitionResult result) {}
+                        public void onPartialResult(RecognitionResult result) {
+                            if (result != null && result.getText() != null && !result.getText().trim().isEmpty()) {
+                                latestSecondaryEnglishResult = result.getText();
+                            }
+                        }
 
                         @Override
                         public void onFinalResult(RecognitionResult result) {
-                            if (result != null && result.getText() != null) {
+                            if (result != null && result.getText() != null && !result.getText().trim().isEmpty()) {
                                 latestSecondaryEnglishResult = result.getText();
                             }
                         }

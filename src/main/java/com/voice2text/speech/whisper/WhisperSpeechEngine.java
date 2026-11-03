@@ -383,9 +383,6 @@ public class WhisperSpeechEngine implements SpeechRecognitionEngine {
     public void setListener(RecognitionListener listener) {
         synchronized (lock) {
             this.externalListener = listener;
-            if (voskFallback != null) {
-                voskFallback.setListener(listener);
-            }
         }
     }
 
