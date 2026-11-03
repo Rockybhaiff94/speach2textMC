@@ -63,6 +63,9 @@ public class VoiceToTextController implements RecognitionListener {
     private SpeechRecognitionEngine speechEngine;
     private volatile SpeechRecognitionEngine secondaryEngine;
     private volatile String latestSecondaryEnglishResult = "";
+    private volatile String secondaryModelId = null;
+    private volatile long primaryInferenceDurationMs = 0;
+    private volatile long secondaryInferenceDurationMs = 0;
     private AudioCaptureService audioCaptureService;
     private AudioSource audioSource;
 
@@ -282,7 +285,7 @@ public class VoiceToTextController implements RecognitionListener {
                     audioCaptureService.setSecondaryEngine(secondaryEngine);
                 }
                 audioCaptureService.start();
-                logDiagnostic("Mic-Activation", "Microphone opened on device: '" + config.getSelectedMicrophone() + "', Primary: " + loadedModelId + ", Secondary: " + (secondaryEngine != null ? "Active" : "None"));
+                logDiagnostic("Mic-Activation", "[Session " + session.getId() + "] Microphone opened on device: '" + config.getSelectedMicrophone() + "', Primary: " + loadedModelId + ", Secondary: " + (secondaryEngine != null ? secondaryModelId : "None"));
                 active.set(true);
                 session.transitionToRecording();
                 statusMessage = "Listening...";
@@ -384,16 +387,20 @@ public class VoiceToTextController implements RecognitionListener {
                 }
 
                 // Stop secondary engine first so it finalizes and populates latestSecondaryEnglishResult
+                long secStart = System.currentTimeMillis();
                 if (secondaryEngine != null && secondaryEngine.isRunning()) {
                     try {
                         secondaryEngine.stop();
                     } catch (Throwable ignored) {
                     }
                 }
+                secondaryInferenceDurationMs = System.currentTimeMillis() - secStart;
 
+                long priStart = System.currentTimeMillis();
                 if (speechEngine != null) {
                     speechEngine.stop();
                 }
+                primaryInferenceDurationMs = System.currentTimeMillis() - priStart;
 
                 // Await final result asynchronously if speech was active and callback not yet received
                 if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
@@ -438,16 +445,20 @@ public class VoiceToTextController implements RecognitionListener {
                 }
 
                 // Stop secondary engine first so it finalizes and populates latestSecondaryEnglishResult
+                long secStart = System.currentTimeMillis();
                 if (secondaryEngine != null && secondaryEngine.isRunning()) {
                     try {
                         secondaryEngine.stop();
                     } catch (Throwable ignored) {
                     }
                 }
+                secondaryInferenceDurationMs = System.currentTimeMillis() - secStart;
 
+                long priStart = System.currentTimeMillis();
                 if (speechEngine != null) {
                     speechEngine.stop();
                 }
+                primaryInferenceDurationMs = System.currentTimeMillis() - priStart;
 
                 if (!session.isFinalResultReceived() && (session.hasSpeechDetectedEver() || transcriptionBuffer.hasSpeech())) {
                     session.awaitFinalResult(1000);
@@ -475,6 +486,7 @@ public class VoiceToTextController implements RecognitionListener {
         currentAudioLevel = 0.0f;
         speechDetected = false;
 
+        logDiagnostic("Final-Dispatch", "[Session " + session.getId() + "] Inserted: '" + finalDraft + "', autoSend: " + autoSend);
         logDiagnostic("Pre-Insertion", "Final draft before insertion: '" + finalDraft + "', autoSend: " + autoSend);
 
         final String dispatchedText = finalDraft;
@@ -607,6 +619,7 @@ public class VoiceToTextController implements RecognitionListener {
             return;
         }
 
+        long sessId = session.getId();
         String rawText = result.getText();
         if (isRomanizedHinglishActive()) {
             String original = rawText;
@@ -614,12 +627,12 @@ public class VoiceToTextController implements RecognitionListener {
             if (correctionService != null) {
                 rawText = correctionService.correctFinalizedText(rawText);
             }
-            logDiagnostic("ASR-Partial", "Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
+            logDiagnostic("ASR-Partial", "[Session " + sessId + "] Raw: '" + original + "' -> Transliterated: '" + rawText + "'");
         } else {
             if (correctionService != null) {
                 rawText = correctionService.correctFinalizedText(rawText);
             }
-            logDiagnostic("ASR-Partial", "Raw: '" + rawText + "'");
+            logDiagnostic("ASR-Partial", "[Session " + sessId + "] Raw: '" + rawText + "'");
         }
         transcriptionBuffer.updatePartial(rawText);
         String display = transcriptionBuffer.getDisplayText();
@@ -639,21 +652,37 @@ public class VoiceToTextController implements RecognitionListener {
             return;
         }
 
+        long sessId = session.getId();
         String rawText = result.getText();
+        long samples = audioCaptureService != null ? audioCaptureService.getTotalSamplesCaptured() : 0;
+        double durationSec = samples / 16000.0;
+
+        logDiagnostic("Audio-Metrics", "[Session " + sessId + "] Samples: " + samples + ", Duration: " + String.format(java.util.Locale.ROOT, "%.2fs", durationSec));
+        logDiagnostic("Primary-Inference", "[Session " + sessId + "] Model: '" + loadedModelId + "', Duration: " + primaryInferenceDurationMs + "ms, Raw: '" + rawText + "', Confidence: " + String.format(java.util.Locale.ROOT, "%.2f", result.getConfidence()));
+
+        if (result.getWordDetails() != null && !result.getWordDetails().isEmpty()) {
+            logDiagnostic("Word-Timestamps", "[Session " + sessId + "] " + result.getWordDetails());
+        }
+
+        if (secondaryEngine != null) {
+            logDiagnostic("Secondary-Inference", "[Session " + sessId + "] Model: '" + secondaryModelId + "', Duration: " + secondaryInferenceDurationMs + "ms, Raw: '" + latestSecondaryEnglishResult + "'");
+        }
 
         if (isRomanizedHinglishActive()) {
             String original = rawText;
             String engText = latestSecondaryEnglishResult;
+            logDiagnostic("Merger-Input", "[Session " + sessId + "] Hindi Raw: '" + original + "', English Raw: '" + engText + "'");
             rawText = com.voice2text.transcription.DualModelAlignmentMerger.merge(rawText, engText);
+            logDiagnostic("Merger-Output", "[Session " + sessId + "] Merged: '" + rawText + "'");
             if (correctionService != null) {
                 rawText = correctionService.correctFinalizedText(rawText);
             }
-            logDiagnostic("ASR-Final", "Raw: '" + original + "' + Eng: '" + engText + "' -> Merged: '" + rawText + "'");
+            logDiagnostic("ASR-Final", "[Session " + sessId + "] Raw: '" + original + "' + Eng: '" + engText + "' -> Merged: '" + rawText + "'");
         } else {
             if (correctionService != null) {
                 rawText = correctionService.correctFinalizedText(rawText);
             }
-            logDiagnostic("ASR-Final", "Raw: '" + rawText + "'");
+            logDiagnostic("ASR-Final", "[Session " + sessId + "] Raw: '" + rawText + "'");
         }
 
         transcriptionBuffer.commitFinal(rawText);
@@ -894,6 +923,7 @@ public class VoiceToTextController implements RecognitionListener {
             if (secondaryEngine != null) {
                 secondaryEngine.close();
                 secondaryEngine = null;
+                secondaryModelId = null;
             }
             String secondaryId = "whisper-small".equals(activeId) ? "whisper-hindi2hinglish-apex" : "whisper-small";
             if (modelManager.isModelInstalled(secondaryId)) {
@@ -924,6 +954,7 @@ public class VoiceToTextController implements RecognitionListener {
                         public void onStateChanged(EngineState oldState, EngineState newState) {}
                     });
                     this.secondaryEngine = secEng;
+                    this.secondaryModelId = secondaryId;
                     if (this.audioCaptureService != null) {
                         this.audioCaptureService.setSecondaryEngine(secEng);
                     }
@@ -931,6 +962,7 @@ public class VoiceToTextController implements RecognitionListener {
             }
         } catch (Throwable ignored) {
             this.secondaryEngine = null;
+            this.secondaryModelId = null;
         }
     }
 

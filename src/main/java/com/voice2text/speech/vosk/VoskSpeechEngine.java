@@ -56,6 +56,10 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
                 close();
                 model = new Model(modelDir.getAbsolutePath());
                 recognizer = new Recognizer(model, DEFAULT_SAMPLE_RATE);
+                try {
+                    recognizer.setWords(true);
+                } catch (Throwable ignored) {
+                }
                 setState(EngineState.READY);
             } catch (Throwable e) {
                 setState(EngineState.ERROR);
@@ -75,6 +79,10 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
             if (recognizer == null) {
                 try {
                     recognizer = new Recognizer(model, DEFAULT_SAMPLE_RATE);
+                    try {
+                        recognizer.setWords(true);
+                    } catch (Throwable ignored) {
+                    }
                 } catch (Exception e) {
                     notifyError("Failed to create Vosk recognizer: " + e.getMessage(), e);
                     return;
@@ -95,7 +103,7 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
 
         RecognitionListener currentListener;
         String partialToSend = null;
-        String finalToSend = null;
+        VoskResultData finalResultToSend = null;
 
         synchronized (lock) {
             if (state != EngineState.LISTENING || recognizer == null) {
@@ -108,9 +116,9 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
                 boolean isFinal = recognizer.acceptWaveForm(audioData, length);
                 if (isFinal) {
                     String json = recognizer.getResult();
-                    String text = parseTextFromJson(json, "text");
-                    if (!text.isEmpty()) {
-                        finalToSend = text;
+                    VoskResultData res = parseVoskJson(json, "text");
+                    if (!res.text.isEmpty()) {
+                        finalResultToSend = res;
                         lastPartialText = "";
                     }
                 } else {
@@ -129,8 +137,8 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
 
         // Dispatch outside lock to prevent deadlocks
         if (currentListener != null) {
-            if (finalToSend != null) {
-                currentListener.onFinalResult(new RecognitionResult(finalToSend, true));
+            if (finalResultToSend != null) {
+                currentListener.onFinalResult(new RecognitionResult(finalResultToSend.text, true, System.currentTimeMillis(), finalResultToSend.avgConfidence, finalResultToSend.wordDetails));
             } else if (partialToSend != null) {
                 currentListener.onPartialResult(new RecognitionResult(partialToSend, false));
             }
@@ -140,7 +148,7 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
     @Override
     public void stop() {
         RecognitionListener currentListener;
-        String finalToSend = null;
+        VoskResultData finalResultToSend = null;
 
         synchronized (lock) {
             if (state != EngineState.LISTENING) {
@@ -153,9 +161,9 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
             if (recognizer != null) {
                 try {
                     String json = recognizer.getFinalResult();
-                    String text = parseTextFromJson(json, "text");
-                    if (!text.isEmpty()) {
-                        finalToSend = text;
+                    VoskResultData res = parseVoskJson(json, "text");
+                    if (!res.text.isEmpty()) {
+                        finalResultToSend = res;
                     }
                 } catch (Throwable e) {
                     notifyError("Error flushing final Vosk result: " + e.getMessage(), e);
@@ -166,8 +174,8 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
             setState(EngineState.READY);
         }
 
-        if (currentListener != null && finalToSend != null) {
-            currentListener.onFinalResult(new RecognitionResult(finalToSend, true));
+        if (currentListener != null && finalResultToSend != null) {
+            currentListener.onFinalResult(new RecognitionResult(finalResultToSend.text, true, System.currentTimeMillis(), finalResultToSend.avgConfidence, finalResultToSend.wordDetails));
         }
     }
 
@@ -252,6 +260,54 @@ public class VoskSpeechEngine implements SpeechRecognitionEngine {
             } catch (Exception ignored) {
             }
         }
+    }
+
+    private static class VoskResultData {
+        final String text;
+        final float avgConfidence;
+        final String wordDetails;
+
+        VoskResultData(String text, float avgConfidence, String wordDetails) {
+            this.text = text != null ? text : "";
+            this.avgConfidence = avgConfidence;
+            this.wordDetails = wordDetails != null ? wordDetails : "";
+        }
+    }
+
+    private static VoskResultData parseVoskJson(String json, String textField) {
+        if (json == null || json.isEmpty()) {
+            return new VoskResultData("", 1.0f, "");
+        }
+        String text = parseTextFromJson(json, textField);
+        float avgConf = 1.0f;
+        StringBuilder wordsSummary = new StringBuilder();
+
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            if (obj.has("result")) {
+                com.google.gson.JsonArray arr = obj.getAsJsonArray("result");
+                float totalConf = 0.0f;
+                int count = 0;
+                for (int i = 0; i < arr.size(); i++) {
+                    JsonObject w = arr.get(i).getAsJsonObject();
+                    String word = w.has("word") ? w.get("word").getAsString() : "";
+                    float start = w.has("start") ? w.get("start").getAsFloat() : 0.0f;
+                    float end = w.has("end") ? w.get("end").getAsFloat() : 0.0f;
+                    float conf = w.has("conf") ? w.get("conf").getAsFloat() : 1.0f;
+
+                    totalConf += conf;
+                    count++;
+                    if (wordsSummary.length() > 0) wordsSummary.append(", ");
+                    wordsSummary.append(word).append(String.format(java.util.Locale.ROOT, " (%.2fs-%.2fs, conf: %.2f)", start, end, conf));
+                }
+                if (count > 0) {
+                    avgConf = totalConf / count;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return new VoskResultData(text, avgConf, wordsSummary.toString());
     }
 
     private static String parseTextFromJson(String json, String field) {

@@ -33,6 +33,7 @@ public class AudioCaptureService {
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final BlockingQueue<byte[]> audioQueue = new ArrayBlockingQueue<>(MAX_QUEUE_CAPACITY);
+    private final java.util.concurrent.atomic.AtomicLong totalSamplesCaptured = new java.util.concurrent.atomic.AtomicLong(0);
 
     private Thread captureThread;
     private Thread processingThread;
@@ -68,6 +69,7 @@ public class AudioCaptureService {
             return;
         }
 
+        totalSamplesCaptured.set(0);
         audioQueue.clear();
         audioSource.open();
         running.set(true);
@@ -88,6 +90,7 @@ public class AudioCaptureService {
             try {
                 int bytesRead = audioSource.read(buffer, 0, buffer.length);
                 if (bytesRead > 0) {
+                    totalSamplesCaptured.addAndGet(bytesRead / 2);
                     long now = System.currentTimeMillis();
                     // Calculate RMS and speech activity
                     float rms = levelMeter.calculateRms(buffer, bytesRead);
@@ -234,5 +237,9 @@ public class AudioCaptureService {
 
     public int getQueueSize() {
         return audioQueue.size();
+    }
+
+    public long getTotalSamplesCaptured() {
+        return totalSamplesCaptured.get();
     }
 }

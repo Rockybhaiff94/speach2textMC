@@ -9,20 +9,26 @@ public class RecognitionResult {
     private final boolean isFinal;
     private final long timestamp;
     private final float confidence;
+    private final String wordDetails;
 
-    public RecognitionResult(String text, boolean isFinal, long timestamp, float confidence) {
+    public RecognitionResult(String text, boolean isFinal, long timestamp, float confidence, String wordDetails) {
         this.text = text != null ? text.trim() : "";
         this.isFinal = isFinal;
         this.timestamp = timestamp;
         this.confidence = confidence;
+        this.wordDetails = wordDetails != null ? wordDetails : "";
+    }
+
+    public RecognitionResult(String text, boolean isFinal, long timestamp, float confidence) {
+        this(text, isFinal, timestamp, confidence, "");
     }
 
     public RecognitionResult(String text, boolean isFinal, float confidence) {
-        this(text, isFinal, System.currentTimeMillis(), confidence);
+        this(text, isFinal, System.currentTimeMillis(), confidence, "");
     }
 
     public RecognitionResult(String text, boolean isFinal) {
-        this(text, isFinal, System.currentTimeMillis(), 1.0f);
+        this(text, isFinal, System.currentTimeMillis(), 1.0f, "");
     }
 
     public String getText() {
@@ -39,6 +45,10 @@ public class RecognitionResult {
 
     public float getConfidence() {
         return confidence;
+    }
+
+    public String getWordDetails() {
+        return wordDetails;
     }
 
     public boolean isEmpty() {

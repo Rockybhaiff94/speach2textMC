@@ -287,8 +287,11 @@ public class WhisperSpeechEngine implements SpeechRecognitionEngine {
             if (code == 0) {
                 int nSegments = whisperJNI.fullNSegments(whisperContext);
                 StringBuilder transcript = new StringBuilder();
+                StringBuilder wordTimestamps = new StringBuilder();
                 for (int i = 0; i < nSegments; i++) {
                     String seg = whisperJNI.fullGetSegmentText(whisperContext, i);
+                    long t0 = whisperJNI.fullGetSegmentTimestamp0(whisperContext, i) * 10L;
+                    long t1 = whisperJNI.fullGetSegmentTimestamp1(whisperContext, i) * 10L;
                     if (seg != null) {
                         seg = seg.trim();
                         // Filter out Whisper hallucinated annotations
@@ -296,6 +299,9 @@ public class WhisperSpeechEngine implements SpeechRecognitionEngine {
                             if (transcript.length() > 0)
                                 transcript.append(" ");
                             transcript.append(seg);
+                            if (wordTimestamps.length() > 0)
+                                wordTimestamps.append(", ");
+                            wordTimestamps.append(seg).append(String.format(java.util.Locale.ROOT, " (%.2fs-%.2fs)", t0 / 1000.0, t1 / 1000.0));
                         }
                     }
                 }
@@ -308,7 +314,7 @@ public class WhisperSpeechEngine implements SpeechRecognitionEngine {
                 if (!text.isEmpty()) {
                     RecognitionListener listener = externalListener;
                     if (listener != null) {
-                        listener.onFinalResult(new RecognitionResult(text, true, System.currentTimeMillis(), 0.98f));
+                        listener.onFinalResult(new RecognitionResult(text, true, System.currentTimeMillis(), 0.98f, wordTimestamps.toString()));
                     }
                 }
             }
