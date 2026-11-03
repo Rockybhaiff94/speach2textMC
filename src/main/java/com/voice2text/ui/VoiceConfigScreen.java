@@ -6,7 +6,6 @@ import com.voice2text.audio.AudioDeviceManager;
 import com.voice2text.config.VoiceToTextConfig;
 import com.voice2text.input.KeybindManager;
 import com.voice2text.model.DownloadProgressListener;
-import com.voice2text.model.ModelInstallationState;
 import com.voice2text.model.ModelManager;
 import com.voice2text.model.SpeechModelInfo;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -25,10 +24,13 @@ import java.util.List;
  * - Recording Mode (Hold-to-Talk vs Toggle Recording)
  * - Automatic Send (OFF by default)
  * - Keybinds and clear vanilla conflict warnings
- * - Microphone selection (bottom-left) and language/model selection (bottom-right)
- * - General formatting options
+ * - Microphone selection and refresh
+ * - Simplified, direct AI Model downloads & activation (Whisper Small & Whisper Hindi2Hinglish Apex)
  */
 public class VoiceConfigScreen extends Screen {
+
+    public static final String MODEL_WHISPER_SMALL = "whisper-small";
+    public static final String MODEL_APEX = "whisper-hindi2hinglish-apex";
 
     public enum SelectedKeybind {
         NONE,
@@ -43,14 +45,13 @@ public class VoiceConfigScreen extends Screen {
     private final ModelManager modelManager;
     private SelectedKeybind selectedKeybind = SelectedKeybind.NONE;
 
+    // Download state tracking
     private String downloadStatus = "";
     private int downloadPercent = -1;
     private long bytesDownloaded = 0;
     private long totalBytesExpected = 0;
     private boolean isDownloading = false;
-
-    private final List<String> availableModelIds = new ArrayList<>();
-    private int currentModelIndex = 0;
+    private String downloadingModelId = null;
 
     private final List<String> availableMics = new ArrayList<>();
     private int currentMicIndex = 0;
@@ -68,15 +69,10 @@ public class VoiceConfigScreen extends Screen {
             mod.getKeybindManager().syncFromMinecraftKeyMappings();
         }
 
-        // Discover models
+        // Discover locally installed models
         if (modelManager != null) {
             modelManager.discoverInstalledModels();
-            this.availableModelIds.addAll(modelManager.getAvailableModels().keySet());
         }
-        if (availableModelIds.isEmpty()) {
-            availableModelIds.add(ModelManager.DEFAULT_MODEL_ID);
-        }
-        this.currentModelIndex = Math.max(0, availableModelIds.indexOf(config.getActiveModelId()));
 
         // Discover microphones
         refreshMicrophoneList();
@@ -95,14 +91,12 @@ public class VoiceConfigScreen extends Screen {
     @Override
     protected void init() {
         int centerX = this.width / 2;
-        int startY = 26;
+        int startY = 24;
         int btnW = 185;
         int btnH = 20;
         int rowSpacing = 22;
 
         // --- ROW 1: Recording Mode & Automatic Send ---
-        // Left: Recording Mode (Hold-to-Talk vs Toggle Recording)
-        // Left: Recording Mode Selector
         String recMode = config.getRecordingMode();
         String modeLabel;
         String modeTip;
@@ -133,7 +127,6 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal(modeTip)))
          .bounds(centerX - btnW - 4, startY, btnW, btnH).build());
 
-        // Right: Automatic Send (OFF by default)
         boolean autoSend = config.isAutomaticSend();
         String sendLabel = "Automatic Send: " + (autoSend ? "§aON" : "§cOFF");
         addRenderableWidget(Button.builder(
@@ -146,10 +139,10 @@ public class VoiceConfigScreen extends Screen {
                     }
                     rebuildWidgets();
                 }
-        ).tooltip(Tooltip.create(Component.literal("When enabled, dictated messages are sent automatically when recording ends. Review your message before enabling this option.")))
+        ).tooltip(Tooltip.create(Component.literal("When enabled, dictated messages are sent automatically when recording ends.")))
          .bounds(centerX + 4, startY, btnW, btnH).build());
 
-        // --- ROW 2: Keybinds (Chat-Only Toggle Key & Gameplay Hold Key) ---
+        // --- ROW 2: Keybinds (Chat Toggle Key & Gameplay Hold Key) ---
         String actMsg = selectedKeybind == SelectedKeybind.ACTIVATION ? "Chat Toggle: §e> Press Key <" : "Chat Toggle Key: §b[ " + config.getActivationKey() + " ]";
         addRenderableWidget(Button.builder(
                 Component.literal(actMsg),
@@ -208,7 +201,7 @@ public class VoiceConfigScreen extends Screen {
                     config.setSelectedMicrophone(selected);
                     rebuildWidgets();
                 }
-        ).tooltip(Tooltip.create(Component.literal("Click to cycle input microphones. Full device name: " + currentMic)))
+        ).tooltip(Tooltip.create(Component.literal("Click to cycle input microphones. Device: " + currentMic)))
          .bounds(centerX - btnW - 4, startY + (rowSpacing * 3), btnW, btnH).build());
 
         addRenderableWidget(Button.builder(
@@ -220,7 +213,7 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal("Re-scans available operating system physical and virtual audio input devices.")))
          .bounds(centerX + 4, startY + (rowSpacing * 3), btnW, btnH).build());
 
-        // --- ROW 5: Reset Keybinds & Model Library ---
+        // --- ROW 5: Reset Keybinds & Active Engine Toggle ---
         addRenderableWidget(Button.builder(
                 Component.literal("§7Reset Keybinds"),
                 button -> {
@@ -235,15 +228,91 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal("Restores default key mappings: T for chat activation, V for gameplay hold, P for stop & draft, O for settings.")))
          .bounds(centerX - btnW - 4, startY + (rowSpacing * 4), btnW, btnH).build());
 
+        String activeModelId = config.getActiveModelId();
+        SpeechModelInfo activeInfo = modelManager.getModelInfo(activeModelId);
+        String activeDisplayName = activeInfo != null ? activeInfo.getDisplayName() : activeModelId;
+        if (activeDisplayName.length() > 20) {
+            activeDisplayName = activeDisplayName.substring(0, 18) + "..";
+        }
         addRenderableWidget(Button.builder(
-                Component.literal("🌐 Speech Model Library ➔"),
+                Component.literal("Active: §a" + activeDisplayName),
                 button -> {
-                    if (this.minecraft != null) {
-                        this.minecraft.gui.setScreen(new ModelLibraryScreen(this));
+                    // Quick toggle between the two models if installed
+                    String next = MODEL_WHISPER_SMALL.equals(activeModelId) ? MODEL_APEX : MODEL_WHISPER_SMALL;
+                    if (modelManager.isModelInstalled(next)) {
+                        switchActiveModel(next);
+                    } else {
+                        downloadStatus = "§e" + (MODEL_WHISPER_SMALL.equals(next) ? "Whisper Small" : "Apex") + " is not installed yet. Click download below.";
+                        rebuildWidgets();
                     }
                 }
-        ).tooltip(Tooltip.create(Component.literal("Manage the two supported speech models: Whisper Hindi2Hinglish Apex (Hindi) and Whisper Small (English).")))
+        ).tooltip(Tooltip.create(Component.literal("Active speech engine. Click to toggle between installed models.")))
          .bounds(centerX + 4, startY + (rowSpacing * 4), btnW, btnH).build());
+
+        // --- ROW 6: AVAILABLE AI MODELS (Simple Direct Buttons) ---
+        int modelsY = startY + (rowSpacing * 5) + 14;
+
+        // Model 1: Whisper Small (English)
+        boolean smallInstalled = modelManager.isModelInstalled(MODEL_WHISPER_SMALL);
+        boolean smallIsDownloading = isDownloading && MODEL_WHISPER_SMALL.equals(downloadingModelId);
+        boolean smallActive = MODEL_WHISPER_SMALL.equals(activeModelId);
+
+        String smallBtnLabel;
+        if (smallIsDownloading) {
+            smallBtnLabel = "§c✕ Cancel Download (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
+        } else if (smallInstalled) {
+            smallBtnLabel = smallActive ? "§a✔ Whisper Small (Active)" : "§bUse Whisper Small";
+        } else {
+            smallBtnLabel = "⬇ Download Whisper Small";
+        }
+
+        addRenderableWidget(Button.builder(
+                Component.literal(smallBtnLabel),
+                button -> {
+                    if (smallIsDownloading) {
+                        cancelModelDownload(MODEL_WHISPER_SMALL);
+                    } else if (smallInstalled) {
+                        switchActiveModel(MODEL_WHISPER_SMALL);
+                    } else {
+                        startModelDownload(MODEL_WHISPER_SMALL);
+                    }
+                }
+        ).tooltip(Tooltip.create(Component.literal(
+                smallIsDownloading ? "Click to cancel the ongoing download."
+                : (smallInstalled ? (smallActive ? "Currently active engine." : "Click to select Whisper Small as the active speech recognition engine.")
+                : "Download OpenAI Whisper Small model (~488 MB) for accurate English speech recognition."))))
+         .bounds(centerX - btnW - 4, modelsY, btnW, btnH).build());
+
+        // Model 2: Whisper Hindi2Hinglish Apex (Hindi / Hinglish)
+        boolean apexInstalled = modelManager.isModelInstalled(MODEL_APEX);
+        boolean apexIsDownloading = isDownloading && MODEL_APEX.equals(downloadingModelId);
+        boolean apexActive = MODEL_APEX.equals(activeModelId);
+
+        String apexBtnLabel;
+        if (apexIsDownloading) {
+            apexBtnLabel = "§c✕ Cancel Download (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
+        } else if (apexInstalled) {
+            apexBtnLabel = apexActive ? "§a✔ Apex Hinglish (Active)" : "§bUse Apex Hinglish";
+        } else {
+            apexBtnLabel = "⬇ Download Apex";
+        }
+
+        addRenderableWidget(Button.builder(
+                Component.literal(apexBtnLabel),
+                button -> {
+                    if (apexIsDownloading) {
+                        cancelModelDownload(MODEL_APEX);
+                    } else if (apexInstalled) {
+                        switchActiveModel(MODEL_APEX);
+                    } else {
+                        startModelDownload(MODEL_APEX);
+                    }
+                }
+        ).tooltip(Tooltip.create(Component.literal(
+                apexIsDownloading ? "Click to cancel the ongoing download."
+                : (apexInstalled ? (apexActive ? "Currently active engine." : "Click to select Whisper Hindi2Hinglish Apex as the active speech engine.")
+                : "Download Whisper Hindi2Hinglish Apex model (~574 MB) for natural Hindi speech & Roman transliteration."))))
+         .bounds(centerX + 4, modelsY, btnW, btnH).build());
 
         // --- BOTTOM: Done Button ---
         addRenderableWidget(Button.builder(
@@ -257,7 +326,102 @@ public class VoiceConfigScreen extends Screen {
                         this.minecraft.gui.setScreen(parent);
                     }
                 }
-        ).bounds(centerX - 100, this.height - 28, 200, 20).build());
+        ).bounds(centerX - 100, this.height - 26, 200, 20).build());
+    }
+
+    private void switchActiveModel(String modelId) {
+        config.setActiveModelId(modelId);
+        VoiceToTextMod mod = VoiceToTextMod.getInstance();
+        if (mod != null) {
+            mod.getConfigManager().save(config);
+            if (mod.getController() != null) {
+                mod.getController().switchModel(modelId);
+            }
+        }
+        SpeechModelInfo info = modelManager.getModelInfo(modelId);
+        String name = info != null ? info.getDisplayName() : modelId;
+        downloadStatus = "§aActivated speech engine: " + name;
+        rebuildWidgets();
+    }
+
+    private void startModelDownload(String modelId) {
+        if (isDownloading) {
+            downloadStatus = "§cAnother download is already in progress. Please wait or cancel.";
+            rebuildWidgets();
+            return;
+        }
+
+        if (modelManager.isModelInstalled(modelId)) {
+            downloadStatus = "§aModel is already installed.";
+            rebuildWidgets();
+            return;
+        }
+
+        SpeechModelInfo info = modelManager.getModelInfo(modelId);
+        if (info == null) {
+            downloadStatus = "§cUnknown model: " + modelId;
+            rebuildWidgets();
+            return;
+        }
+
+        isDownloading = true;
+        downloadingModelId = modelId;
+        downloadPercent = 0;
+        bytesDownloaded = 0;
+        totalBytesExpected = info.getDownloadSizeBytes();
+        downloadStatus = "§eConnecting to " + info.getDisplayName() + "...";
+        rebuildWidgets();
+
+        modelManager.downloadModel(modelId, new DownloadProgressListener() {
+            @Override
+            public void onProgress(long bytesRead, long totalBytes, int percent) {
+                bytesDownloaded = bytesRead;
+                totalBytesExpected = totalBytes;
+                downloadPercent = percent;
+            }
+
+            @Override
+            public void onStatus(String statusMessage) {
+                downloadStatus = statusMessage;
+            }
+
+            @Override
+            public void onCompleted() {
+                isDownloading = false;
+                downloadingModelId = null;
+                downloadStatus = "§a" + info.getDisplayName() + " verified & ready for offline dictation!";
+
+                VoiceToTextMod mod = VoiceToTextMod.getInstance();
+                if (mod != null && mod.getController() != null) {
+                    mod.getController().switchModel(modelId);
+                }
+
+                if (minecraft != null) {
+                    minecraft.execute(VoiceConfigScreen.this::rebuildWidgets);
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage, Throwable throwable) {
+                isDownloading = false;
+                downloadingModelId = null;
+                downloadStatus = "§cDownload failed: " + errorMessage;
+                if (minecraft != null) {
+                    minecraft.execute(VoiceConfigScreen.this::rebuildWidgets);
+                }
+            }
+        });
+    }
+
+    private void cancelModelDownload(String modelId) {
+        if (modelManager != null) {
+            modelManager.cancelDownload(modelId);
+        }
+        isDownloading = false;
+        downloadingModelId = null;
+        downloadPercent = -1;
+        downloadStatus = "§eDownload cancelled by user.";
+        rebuildWidgets();
     }
 
     @Override
@@ -314,60 +478,36 @@ public class VoiceConfigScreen extends Screen {
         return super.mouseClicked(event, isDoubleOrTripleClick);
     }
 
-    private void startModelDownload() {
-        String activeModelId = availableModelIds.get(currentModelIndex);
-        isDownloading = true;
-        downloadStatus = "§eConnecting...";
-        rebuildWidgets();
-
-        modelManager.downloadModel(activeModelId, new DownloadProgressListener() {
-            @Override
-            public void onProgress(long bytesRead, long totalBytes, int percent) {
-                bytesDownloaded = bytesRead;
-                totalBytesExpected = totalBytes;
-                downloadPercent = percent;
-            }
-
-            @Override
-            public void onStatus(String statusMessage) {
-                downloadStatus = statusMessage;
-            }
-
-            @Override
-            public void onCompleted() {
-                isDownloading = false;
-                downloadStatus = "§aModel verified & ready for offline dictation!";
-
-                VoiceToTextMod mod = VoiceToTextMod.getInstance();
-                if (mod != null && mod.getController() != null) {
-                    mod.getController().switchModel(activeModelId);
-                }
-
-                if (minecraft != null) {
-                    minecraft.execute(VoiceConfigScreen.this::rebuildWidgets);
-                }
-            }
-
-            @Override
-            public void onError(String errorMessage, Throwable throwable) {
-                isDownloading = false;
-                downloadStatus = "§cDownload failed: " + errorMessage;
-                if (minecraft != null) {
-                    minecraft.execute(VoiceConfigScreen.this::rebuildWidgets);
-                }
-            }
-        });
-    }
-
     @Override
     public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
 
         int centerX = this.width / 2;
+        int btnW = 185;
+        int startY = 24;
+        int rowSpacing = 22;
 
         // Header Title
-        extractor.centeredText(this.font, "§lVoice2Text Settings", centerX, 6, 0xFFFFFFFF);
-        extractor.centeredText(this.font, "§7Real-Time Offline Speech-to-Text for Minecraft", centerX, 16, 0x90A4B0BE);
+        extractor.centeredText(this.font, "§lVoice2Text Settings", centerX, 5, 0xFFFFFFFF);
+        extractor.centeredText(this.font, "§7Real-Time Offline Speech-to-Text for Minecraft", centerX, 14, 0x90A4B0BE);
+
+        // Section Title: Available AI Models
+        int modelsY = startY + (rowSpacing * 5) + 14;
+        extractor.centeredText(this.font, "§e── Available AI Models ──", centerX, modelsY - 11, 0xFFFFFFFF);
+
+        // Model 1 (Left) subtitle / status
+        boolean smallInstalled = modelManager.isModelInstalled(MODEL_WHISPER_SMALL);
+        boolean smallIsDownloading = isDownloading && MODEL_WHISPER_SMALL.equals(downloadingModelId);
+        String smallStatus = smallInstalled ? "§a● Installed §7(English)"
+                : (smallIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "§7○ Not Installed (~488 MB)");
+        extractor.centeredText(this.font, smallStatus, centerX - (btnW / 2) - 4, modelsY + 22, 0xFFFFFFFF);
+
+        // Model 2 (Right) subtitle / status
+        boolean apexInstalled = modelManager.isModelInstalled(MODEL_APEX);
+        boolean apexIsDownloading = isDownloading && MODEL_APEX.equals(downloadingModelId);
+        String apexStatus = apexInstalled ? "§a● Installed §7(Hindi/Hinglish)"
+                : (apexIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "§7○ Not Installed (~574 MB)");
+        extractor.centeredText(this.font, apexStatus, centerX + (btnW / 2) + 4, modelsY + 22, 0xFFFFFFFF);
 
         // Display Keybind Conflicts or Duplicate Bindings
         VoiceToTextMod mod = VoiceToTextMod.getInstance();
@@ -375,7 +515,7 @@ public class VoiceConfigScreen extends Screen {
                 ? mod.getKeybindManager().getConflictWarnings(this.minecraft)
                 : List.of();
 
-        int footerY = this.height - 44;
+        int footerY = this.height - 40;
 
         if (selectedKeybind != SelectedKeybind.NONE) {
             extractor.centeredText(this.font, "§e▶ Press any key to assign keybind, or ESC to cancel ◀", centerX, footerY, 0xFFFFD700);
@@ -384,28 +524,20 @@ public class VoiceConfigScreen extends Screen {
             if (downloadPercent >= 0) {
                 double curMb = (double) bytesDownloaded / (1024 * 1024);
                 double totMb = (double) totalBytesExpected / (1024 * 1024);
-                progressText = String.format("§eDownloading... %.1f MB / %.1f MB (%d%%)", curMb, totMb, downloadPercent);
+                String modelName = MODEL_WHISPER_SMALL.equals(downloadingModelId) ? "Whisper Small" : "Apex";
+                progressText = String.format("§eDownloading %s: %.1f MB / %.1f MB (%d%%)", modelName, curMb, totMb, downloadPercent);
             } else {
                 progressText = downloadStatus;
             }
             extractor.centeredText(this.font, progressText, centerX, footerY, 0xFFFFFFFF);
         } else if (!downloadStatus.isEmpty()) {
             extractor.centeredText(this.font, downloadStatus, centerX, footerY, 0xFFFFFFFF);
-
-            // If error, show manual fallback instructions
-            if (downloadStatus.contains("failed") || downloadStatus.contains("Error")) {
-                String activeModelId = availableModelIds.get(currentModelIndex);
-                SpeechModelInfo info = modelManager.getModelInfo(activeModelId);
-                String manualUrl = ModelManager.getManualDownloadUrl(info);
-                extractor.centeredText(this.font, "§7Manual link: " + manualUrl, centerX, footerY + 10, 0x80C8D6E5);
-            }
         } else if (!warnings.isEmpty()) {
-            // Display first conflict warning prominently
             String firstWarn = warnings.get(0);
             extractor.centeredText(this.font, "§e⚠ " + firstWarn, centerX, footerY - 4, 0xFFFFFF55);
             extractor.centeredText(this.font, "§7Pressing key will trigger Voice2Text. You can remap in Controls.", centerX, footerY + 6, 0xFFAAAAAA);
         } else {
-            extractor.centeredText(this.font, "§7Keys configurable in Options → Controls → Key Binds → Voice2Text", centerX, footerY, 0x8090A0B0);
+            extractor.centeredText(this.font, "§7Hotkeys: T (Chat Toggle), V (Gameplay Hold), P (Stop & Draft), O (Settings)", centerX, footerY, 0x8090A0B0);
         }
     }
 

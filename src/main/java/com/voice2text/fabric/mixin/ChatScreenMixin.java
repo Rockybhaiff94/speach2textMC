@@ -4,7 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.voice2text.VoiceToTextMod;
 import com.voice2text.input.InputStateMachine;
 import com.voice2text.model.SpeechModelInfo;
-import com.voice2text.ui.ModelLibraryScreen;
+import com.voice2text.ui.VoiceConfigScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -21,7 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Mixin intercepting key presses, rendering the compact audio-reactive visualizer,
+ * Mixin intercepting key presses, rendering the compact audio-reactive
+ * visualizer,
  * and handling chat lifecycle interruptions in ChatScreen.
  */
 @Mixin(ChatScreen.class)
@@ -64,14 +65,16 @@ public abstract class ChatScreenMixin extends Screen {
                         // Model is missing -> explain and open Model Library
                         SpeechModelInfo info = mod.getModelManager().getModelInfo(activeModelId);
                         String modelName = info != null ? info.getDisplayName() : activeModelId;
-                        mod.getChatBridge().displayClientMessage("§c[Voice2Text] Selected model '" + modelName + "' needs to be downloaded before using Live speech.", true);
+                        mod.getChatBridge().displayClientMessage("§c[Voice2Text] Selected model '" + modelName
+                                + "' needs to be downloaded before using Live speech.", true);
                         if (Minecraft.getInstance() != null) {
-                            Minecraft.getInstance().gui.setScreen(new ModelLibraryScreen(this, activeModelId));
+                            Minecraft.getInstance().gui.setScreen(new VoiceConfigScreen(this));
                         }
                     }
-                }
-        ).tooltip(Tooltip.create(Component.literal("SpeakCraft Live Speech Recognition. Click to toggle dictation or open Model Library.")))
-         .bounds(btnX, btnY, btnW, btnH).build();
+                })
+                .tooltip(Tooltip.create(Component
+                        .literal("SpeakCraft Live Speech Recognition. Click to toggle dictation or open Settings.")))
+                .bounds(btnX, btnY, btnW, btnH).build();
 
         addRenderableWidget(this.voice2text$liveButton);
     }
@@ -87,7 +90,8 @@ public abstract class ChatScreenMixin extends Screen {
         long now = System.currentTimeMillis();
         int key = event.key();
 
-        // While Mode A Hold-to-Activate is actively recording, block EditBox key handling
+        // While Mode A Hold-to-Activate is actively recording, block EditBox key
+        // handling
         if (sm.isHoldToTalkRecording()) {
             cir.setReturnValue(true);
             return;
@@ -133,7 +137,8 @@ public abstract class ChatScreenMixin extends Screen {
     }
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))
-    private void onExtractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    private void onExtractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick,
+            CallbackInfo ci) {
         VoiceToTextMod mod = VoiceToTextMod.getInstance();
         if (mod != null && mod.getController() != null && this.voice2text$liveButton != null) {
             boolean active = mod.getController().isDictationActive();

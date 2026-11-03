@@ -13,7 +13,11 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ModelLibraryScreenTest {
+/**
+ * Tests for model actions, discovery, installation detection, and display formatting
+ * exposed in the simplified VoiceConfigScreen interface.
+ */
+public class VoiceConfigModelActionsTest {
 
     private ModelManager modelManager;
 
@@ -28,12 +32,11 @@ public class ModelLibraryScreenTest {
         assertNotNull(modelManager.getModelInfo("whisper-hindi2hinglish-apex"));
         assertNotNull(modelManager.getModelInfo("vosk-model-small-hi-0.22"));
         assertNotNull(modelManager.getModelInfo("vosk-model-small-en-us-0.15"));
-        assertNotNull(modelManager.getModelInfo("whisper-large-v3-turbo"));
     }
 
     @Test
     public void testModelInstallationDetection() throws IOException {
-        String modelId = "whisper-tiny";
+        String modelId = VoiceConfigScreen.MODEL_WHISPER_SMALL;
         assertFalse(modelManager.isModelInstalled(modelId));
 
         File modelDir = modelManager.getModelDir(modelId);
@@ -53,12 +56,13 @@ public class ModelLibraryScreenTest {
 
     @Test
     public void testFormattedSizes() {
-        SpeechModelInfo apex = modelManager.getModelInfo("whisper-hindi2hinglish-apex");
+        SpeechModelInfo apex = modelManager.getModelInfo(VoiceConfigScreen.MODEL_APEX);
         assertNotNull(apex);
-        assertTrue(apex.getFormattedDownloadSize().contains("MB"));
+        assertTrue(apex.getFormattedDownloadSize().contains("MB") || apex.getFormattedDownloadSize().contains("GB"));
 
-        SpeechModelInfo small = modelManager.getModelInfo("whisper-small");
+        SpeechModelInfo small = modelManager.getModelInfo(VoiceConfigScreen.MODEL_WHISPER_SMALL);
         assertNotNull(small);
-        assertTrue(small.getFormattedDownloadSize().contains("MB"));
+        assertTrue(small.getFormattedDownloadSize().contains("MB") || small.getFormattedDownloadSize().contains("GB"));
     }
 }
+

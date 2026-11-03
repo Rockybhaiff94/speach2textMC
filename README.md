@@ -29,10 +29,10 @@ A high-performance, accessibility-focused, **client-side only** Minecraft mod th
   - Real device enumeration using Java Sound `TargetDataLine` lines (16kHz 16-bit mono PCM).
   - Dropdown selector with System Default, discovered microphones, and refresh capability.
   - Graceful fallback with player notifications if a device is disconnected.
-- **Language & Speech Model Dropdown**:
-  - Multi-language catalog: English (US), English (India), German, Spanish, French, Italian, Portuguese, Russian, and Hindi.
-  - Contextual Download action showing model download size, progress bar, dual MD5 and SHA-256 integrity verification, safe extraction with Zip Slip protection, and manual download fallback links.
-- **Offline-First & Privacy Preserving**: Speech recognition runs 100% locally on your machine using Kaldi/Vosk neural models. **No audio ever leaves your computer.**
+- **Integrated AI Models & Direct Downloads**:
+  - Two supported models: **Whisper Small** (English recognition, word alignment & spelling preservation) and **Whisper Hindi2Hinglish Apex** (Hindi speech recognition & direct Roman Hinglish transliteration).
+  - Simple, in-place download buttons with real-time progress indicators, cancellation controls, and instant engine switching directly on the Settings screen.
+- **Offline-First & Privacy Preserving**: Speech recognition runs 100% locally on your machine using genuine Whisper.cpp and Vosk native runtimes. **No audio ever leaves your computer.**
 - **Universal Multiplayer Compatibility**: Works on single-player, LAN worlds, Realms, and multiplayer servers. **No server-side mod, plugin, proxy, or server operator permission is required.**
 
 ---
