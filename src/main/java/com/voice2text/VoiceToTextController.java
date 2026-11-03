@@ -763,6 +763,34 @@ public class VoiceToTextController implements RecognitionListener {
         return loadedModelId;
     }
 
+    /**
+     * Safely closes loaded speech engines and releases native model file locks
+     * before deleting or reinstalling a model.
+     */
+    public synchronized void releaseModelResources(String modelId) {
+        if (active.get() || currentSession != null) {
+            cancelDictation();
+        }
+        if (modelId != null && (modelId.equals(loadedModelId) || modelId.equals(configManager.getConfig().getActiveModelId()))) {
+            if (speechEngine != null) {
+                try {
+                    speechEngine.close();
+                } catch (Throwable ignored) {
+                }
+            }
+            if (secondaryEngine != null) {
+                try {
+                    secondaryEngine.close();
+                } catch (Throwable ignored) {
+                }
+                secondaryEngine = null;
+            }
+            this.loadedModelId = null;
+            this.statusMessage = "Engine Released";
+            notifyStateChange();
+        }
+    }
+
     public synchronized boolean switchModel(String modelId) {
         if (modelId == null) {
             return false;

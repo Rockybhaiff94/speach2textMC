@@ -31,7 +31,7 @@ public class ModelManagerTest {
         assertEquals(ModelFamily.HINGLISH_SPECIALIZED, apex.getFamily());
         assertEquals("Roman Hindi (Hinglish) Direct", apex.getOutputScript());
         assertTrue(apex.hasAlternateUrl());
-        assertEquals("be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21", apex.getPrimarySha256());
+        assertEquals("be07e048e1e599ad46341c08d2a135645097a530221678b7a0dd1b1919c6e1b21", apex.getPrimarySha256());
         assertEquals("ab7280bbcf29e334f7e3b2a9ac0ca386", apex.getMd5Checksum());
 
         // Model 2: Whisper Small

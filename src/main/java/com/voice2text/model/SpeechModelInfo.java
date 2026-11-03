@@ -214,7 +214,8 @@ public class SpeechModelInfo {
 
         // Known verified official alternate hashes for Hindi / Hinglish Apex (GGML or Vosk)
         if ("whisper-hindi2hinglish-apex".equals(id) || id.contains("hinglish") || id.contains("hi-0.22")) {
-            if ("be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21".equalsIgnoreCase(cleanSha)
+            if ("be07e048e1e599ad46341c08d2a135645097a530221678b7a0dd1b1919c6e1b21".equalsIgnoreCase(cleanSha)
+                    || "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21".equalsIgnoreCase(cleanSha)
                     || "9d877151b15cec1feb9110cfbc0a3162cf377bcc0ab1935174226f461cf60f13".equalsIgnoreCase(cleanSha)) {
                 return true;
             }

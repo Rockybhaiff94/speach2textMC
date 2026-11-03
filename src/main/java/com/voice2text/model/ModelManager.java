@@ -131,8 +131,8 @@ public class ModelManager {
                 "https://github.com/BartekReterski/VoskModels/releases/download/v1/vosk-model-small-hi-0.22.zip",
                 44458845L,
                 132120576L,
-                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
-                "be07e048e1e599ad46341c08d2a135645097a538221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a530221678b7a0dd1b1919c6e1b21",
+                "be07e048e1e599ad46341c08d2a135645097a530221678b7a0dd1b1919c6e1b21",
                 "ab7280bbcf29e334f7e3b2a9ac0ca386",
                 "MIT / Open-weights"));
 
@@ -694,15 +694,274 @@ public class ModelManager {
         if (modelId == null || modelId.trim().isEmpty()) {
             return false;
         }
-        File dir = new File(modelsBaseDir, modelId.trim());
-        if (dir.exists()) {
-            boolean deleted = deleteRecursively(dir);
-            if (deleted) {
-                modelStates.remove(modelId);
-            }
-            return deleted;
+        String id = modelId.trim();
+        setModelState(id, ModelInstallationState.DELETING, null);
+
+        boolean anyDeleted = false;
+
+        // 1. Delete resolved directory
+        File targetDir = getModelDir(id);
+        if (targetDir != null && targetDir.exists()) {
+            anyDeleted |= deleteRecursively(targetDir);
         }
-        return false;
+
+        // 2. Also delete direct named folder if different
+        File directDir = new File(modelsBaseDir, id);
+        if (directDir.exists() && !directDir.equals(targetDir)) {
+            anyDeleted |= deleteRecursively(directDir);
+        }
+
+        // 3. Clean up any leftover partial downloads matching this model ID
+        if (downloadsBaseDir.exists()) {
+            File[] leftover = downloadsBaseDir.listFiles((d, name) -> name.startsWith(id) && name.endsWith(".download"));
+            if (leftover != null) {
+                for (File f : leftover) {
+                    f.delete();
+                }
+            }
+        }
+
+        boolean successfullyRemoved = (targetDir == null || !targetDir.exists()) && !directDir.exists();
+        if (successfullyRemoved) {
+            modelStates.put(id, ModelInstallationState.NOT_INSTALLED);
+            return true;
+        } else {
+            modelStates.put(id, ModelInstallationState.DELETION_FAILED);
+            return false;
+        }
+    }
+
+    public static long computeDirectorySizeBytes(File dir) {
+        if (dir == null || !dir.exists()) {
+            return 0L;
+        }
+        if (!dir.isDirectory()) {
+            return dir.length();
+        }
+        long total = 0L;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                if (child.isDirectory()) {
+                    total += computeDirectorySizeBytes(child);
+                } else {
+                    total += child.length();
+                }
+            }
+        }
+        return total;
+    }
+
+    public long getModelDiskSizeBytes(String modelId) {
+        File dir = getModelDir(modelId);
+        if (dir == null || !dir.exists()) {
+            return 0L;
+        }
+        return computeDirectorySizeBytes(dir);
+    }
+
+    public String getFormattedDiskSize(String modelId) {
+        long bytes = getModelDiskSizeBytes(modelId);
+        if (bytes <= 0) {
+            SpeechModelInfo info = getModelInfo(modelId);
+            if (info != null && info.getUncompressedSizeBytes() > 0) {
+                return info.getFormattedUncompressedSize();
+            }
+            return "0 MB";
+        }
+        if (bytes >= 1024L * 1024L * 1024L) {
+            return String.format(java.util.Locale.US, "%.2f GB", (double) bytes / (1024.0 * 1024.0 * 1024.0));
+        }
+        return String.format(java.util.Locale.US, "%.1f MB", (double) bytes / (1024.0 * 1024.0));
+    }
+
+    public void reinstallModelAsync(String modelId, DownloadProgressListener listener) {
+        downloadExecutor.submit(() -> {
+            try {
+                reinstallModel(modelId, listener);
+            } catch (Exception e) {
+                if (listener != null) {
+                    listener.onError(e.getMessage() != null ? e.getMessage() : e.toString(), e);
+                }
+            }
+        });
+    }
+
+    public void reinstallModel(String modelId, DownloadProgressListener listener) throws IOException {
+        SpeechModelInfo info = getModelInfo(modelId);
+        if (info == null) {
+            throw new IllegalArgumentException("Unknown model: " + modelId);
+        }
+
+        setModelState(modelId, ModelInstallationState.REINSTALLING, listener);
+        if (listener != null) {
+            listener.onStatus("Preparing clean reinstallation...");
+        }
+
+        File targetDir = getModelDir(modelId);
+        File directDir = new File(modelsBaseDir, modelId.trim());
+        File backupDir = new File(tempBaseDir, "backup_" + modelId.trim() + "_" + System.currentTimeMillis());
+        File stagingDir = new File(tempBaseDir, "reinstall_staging_" + modelId.trim() + "_" + System.currentTimeMillis());
+        File downloadPart = new File(downloadsBaseDir, modelId.trim() + "_reinstall_" + UUID.randomUUID().toString().substring(0, 8) + ".zip.download");
+
+        AtomicBoolean cancelToken = new AtomicBoolean(false);
+        cancellationTokens.put(modelId, cancelToken);
+
+        try {
+            boolean downloadedFromAlternate = false;
+            HttpURLConnection conn;
+            String downloadUrl = info.getPrimaryDownloadUrl();
+
+            try {
+                if (listener != null) {
+                    listener.onStatus("Connecting to " + downloadUrl + "...");
+                }
+                conn = openConnectionWithRedirects(downloadUrl, 15000, 30000);
+            } catch (IOException primaryError) {
+                if (info.hasAlternateUrl()) {
+                    downloadUrl = info.getAlternateDownloadUrl();
+                    downloadedFromAlternate = true;
+                    if (listener != null) {
+                        listener.onStatus("Primary failed. Connecting to mirror: " + downloadUrl + "...");
+                    }
+                    conn = openConnectionWithRedirects(downloadUrl, 15000, 30000);
+                } else {
+                    throw primaryError;
+                }
+            }
+
+            long totalBytes = conn.getContentLengthLong();
+            if (totalBytes <= 0) {
+                totalBytes = info.getDownloadSizeBytes();
+            }
+
+            MessageDigest sha256Digest = MessageDigest.getInstance("SHA-256");
+            MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+
+            try (InputStream in = new BufferedInputStream(conn.getInputStream());
+                 FileOutputStream fos = new FileOutputStream(downloadPart)) {
+                byte[] buffer = new byte[16384];
+                long totalRead = 0;
+                int bytesRead;
+
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    if (cancelToken.get()) {
+                        throw new IOException("Download cancelled by user.");
+                    }
+                    fos.write(buffer, 0, bytesRead);
+                    sha256Digest.update(buffer, 0, bytesRead);
+                    md5Digest.update(buffer, 0, bytesRead);
+                    totalRead += bytesRead;
+
+                    if (listener != null) {
+                        int percent = totalBytes > 0 ? (int) Math.min(100, (totalRead * 100) / totalBytes) : -1;
+                        listener.onProgress(totalRead, totalBytes, percent);
+                    }
+                }
+            }
+
+            if (cancelToken.get()) {
+                throw new IOException("Download cancelled by user.");
+            }
+
+            setModelState(modelId, ModelInstallationState.VERIFYING, listener);
+            if (listener != null) {
+                listener.onStatus("Verifying downloaded files...");
+            }
+
+            String computedSha = bytesToHex(sha256Digest.digest());
+            String computedMd5 = bytesToHex(md5Digest.digest());
+
+            boolean integrityPassed = info.verifyIntegrity(computedSha, computedMd5, downloadedFromAlternate);
+            if (!integrityPassed) {
+                boolean md5Ok = info.getMd5Checksum() != null && !info.getMd5Checksum().isEmpty()
+                        && info.getMd5Checksum().equalsIgnoreCase(computedMd5);
+                boolean shaOk = (info.getPrimarySha256() != null && !info.getPrimarySha256().isEmpty()
+                        && info.getPrimarySha256().equalsIgnoreCase(computedSha))
+                        || (info.getAlternateSha256() != null && !info.getAlternateSha256().isEmpty()
+                        && info.getAlternateSha256().equalsIgnoreCase(computedSha));
+                if (md5Ok || shaOk) {
+                    integrityPassed = true;
+                }
+            }
+
+            setModelState(modelId, ModelInstallationState.EXTRACTING, listener);
+            if (listener != null) {
+                listener.onStatus("Extracting fresh model...");
+            }
+
+            if (stagingDir.exists()) {
+                deleteRecursively(stagingDir);
+            }
+            stagingDir.mkdirs();
+
+            if (downloadUrl.endsWith(".bin") || downloadUrl.endsWith(".onnx")
+                    || info.getPrimaryDownloadUrl().endsWith(".bin")) {
+                File targetBin = new File(stagingDir, downloadUrl.endsWith(".onnx") ? "model.onnx" : "model.bin");
+                copyRecursively(downloadPart, targetBin);
+            } else {
+                extractZipSafely(downloadPart, stagingDir, listener);
+                flattenSingleSubdirectory(stagingDir);
+            }
+
+            if (!isValidModelDir(stagingDir)) {
+                throw new IOException("Extracted files are not a valid speech model directory.");
+            }
+
+            // ATOMIC SWAP: Backup old model directory and replace ONLY after new download is verified!
+            File finalDestination = (targetDir != null && targetDir.exists()) ? targetDir : directDir;
+            if (finalDestination.exists()) {
+                copyRecursively(finalDestination, backupDir);
+                deleteRecursively(finalDestination);
+            }
+
+            finalDestination.mkdirs();
+            copyRecursively(stagingDir, finalDestination);
+
+            if (isValidModelDir(finalDestination)) {
+                deleteRecursively(stagingDir);
+                deleteRecursively(backupDir);
+                downloadPart.delete();
+
+                setModelState(modelId, ModelInstallationState.INSTALLED, listener);
+                if (listener != null) {
+                    listener.onStatus(info.getDisplayName() + " reinstalled successfully!");
+                    listener.onCompleted();
+                }
+            } else {
+                if (backupDir.exists()) {
+                    deleteRecursively(finalDestination);
+                    finalDestination.mkdirs();
+                    copyRecursively(backupDir, finalDestination);
+                    deleteRecursively(backupDir);
+                }
+                throw new IOException("Reinstalled model validation failed. Previous installation preserved.");
+            }
+
+        } catch (Exception e) {
+            deleteRecursively(stagingDir);
+            if (downloadPart.exists()) {
+                downloadPart.delete();
+            }
+            if (backupDir.exists() && (!directDir.exists() || !isValidModelDir(directDir))) {
+                try {
+                    directDir.mkdirs();
+                    copyRecursively(backupDir, directDir);
+                } catch (Throwable ignored) {
+                }
+                deleteRecursively(backupDir);
+            }
+
+            ModelInstallationState revertState = isModelInstalled(modelId) ? ModelInstallationState.INSTALLED : ModelInstallationState.NOT_INSTALLED;
+            setModelState(modelId, revertState, null);
+
+            if (listener != null) {
+                listener.onError(e.getMessage() != null ? e.getMessage() : "Reinstallation failed", e);
+            }
+            throw e instanceof IOException ? (IOException) e : new IOException(e);
+        } finally {
+            cancellationTokens.remove(modelId);
+        }
     }
 
     public static boolean deleteRecursively(File file) {

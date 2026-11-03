@@ -259,9 +259,9 @@ public class VoiceConfigScreen extends Screen {
 
         String smallBtnLabel;
         if (smallIsDownloading) {
-            smallBtnLabel = "§c✕ Cancel Download (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
+            smallBtnLabel = "§c✕ Cancel (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
         } else if (smallInstalled) {
-            smallBtnLabel = smallActive ? "§a✔ Whisper Small (Active)" : "§bUse Whisper Small";
+            smallBtnLabel = smallActive ? "⚙ Manage Small §a(Active)" : "⚙ View / Manage Small";
         } else {
             smallBtnLabel = "⬇ Download Whisper Small";
         }
@@ -272,14 +272,16 @@ public class VoiceConfigScreen extends Screen {
                     if (smallIsDownloading) {
                         cancelModelDownload(MODEL_WHISPER_SMALL);
                     } else if (smallInstalled) {
-                        switchActiveModel(MODEL_WHISPER_SMALL);
+                        if (this.minecraft != null) {
+                            this.minecraft.gui.setScreen(new ModelManageScreen(this, MODEL_WHISPER_SMALL));
+                        }
                     } else {
                         startModelDownload(MODEL_WHISPER_SMALL);
                     }
                 }
         ).tooltip(Tooltip.create(Component.literal(
                 smallIsDownloading ? "Click to cancel the ongoing download."
-                : (smallInstalled ? (smallActive ? "Currently active engine." : "Click to select Whisper Small as the active speech recognition engine.")
+                : (smallInstalled ? "Click to view details, reinstall, or permanently delete Whisper Small."
                 : "Download OpenAI Whisper Small model (~488 MB) for accurate English speech recognition."))))
          .bounds(centerX - btnW - 4, modelsY, btnW, btnH).build());
 
@@ -290,9 +292,9 @@ public class VoiceConfigScreen extends Screen {
 
         String apexBtnLabel;
         if (apexIsDownloading) {
-            apexBtnLabel = "§c✕ Cancel Download (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
+            apexBtnLabel = "§c✕ Cancel (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
         } else if (apexInstalled) {
-            apexBtnLabel = apexActive ? "§a✔ Apex Hinglish (Active)" : "§bUse Apex Hinglish";
+            apexBtnLabel = apexActive ? "⚙ Manage Apex §a(Active)" : "⚙ View / Manage Apex";
         } else {
             apexBtnLabel = "⬇ Download Apex";
         }
@@ -303,14 +305,16 @@ public class VoiceConfigScreen extends Screen {
                     if (apexIsDownloading) {
                         cancelModelDownload(MODEL_APEX);
                     } else if (apexInstalled) {
-                        switchActiveModel(MODEL_APEX);
+                        if (this.minecraft != null) {
+                            this.minecraft.gui.setScreen(new ModelManageScreen(this, MODEL_APEX));
+                        }
                     } else {
                         startModelDownload(MODEL_APEX);
                     }
                 }
         ).tooltip(Tooltip.create(Component.literal(
                 apexIsDownloading ? "Click to cancel the ongoing download."
-                : (apexInstalled ? (apexActive ? "Currently active engine." : "Click to select Whisper Hindi2Hinglish Apex as the active speech engine.")
+                : (apexInstalled ? "Click to view details, reinstall, or permanently delete Whisper Hindi2Hinglish Apex."
                 : "Download Whisper Hindi2Hinglish Apex model (~574 MB) for natural Hindi speech & Roman transliteration."))))
          .bounds(centerX + 4, modelsY, btnW, btnH).build());
 
@@ -495,18 +499,22 @@ public class VoiceConfigScreen extends Screen {
         int modelsY = startY + (rowSpacing * 5) + 14;
         extractor.centeredText(this.font, "§e── Available AI Models ──", centerX, modelsY - 11, 0xFFFFFFFF);
 
+        String activeModelId = config.getActiveModelId();
+
         // Model 1 (Left) subtitle / status
         boolean smallInstalled = modelManager.isModelInstalled(MODEL_WHISPER_SMALL);
         boolean smallIsDownloading = isDownloading && MODEL_WHISPER_SMALL.equals(downloadingModelId);
-        String smallStatus = smallInstalled ? "§a● Installed §7(English)"
-                : (smallIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "§7○ Not Installed (~488 MB)");
+        boolean smallActive = MODEL_WHISPER_SMALL.equals(activeModelId);
+        String smallStatus = smallInstalled ? ("Status: §aInstalled" + (smallActive ? " §8(Active)" : ""))
+                : (smallIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "Status: §7Not Installed (~488 MB)");
         extractor.centeredText(this.font, smallStatus, centerX - (btnW / 2) - 4, modelsY + 22, 0xFFFFFFFF);
 
         // Model 2 (Right) subtitle / status
         boolean apexInstalled = modelManager.isModelInstalled(MODEL_APEX);
         boolean apexIsDownloading = isDownloading && MODEL_APEX.equals(downloadingModelId);
-        String apexStatus = apexInstalled ? "§a● Installed §7(Hindi/Hinglish)"
-                : (apexIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "§7○ Not Installed (~574 MB)");
+        boolean apexActive = MODEL_APEX.equals(activeModelId);
+        String apexStatus = apexInstalled ? ("Status: §aInstalled" + (apexActive ? " §8(Active)" : ""))
+                : (apexIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "Status: §7Not Installed (~574 MB)");
         extractor.centeredText(this.font, apexStatus, centerX + (btnW / 2) + 4, modelsY + 22, 0xFFFFFFFF);
 
         // Display Keybind Conflicts or Duplicate Bindings

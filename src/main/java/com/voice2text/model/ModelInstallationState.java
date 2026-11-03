@@ -12,6 +12,12 @@ public enum ModelInstallationState {
     EXTRACTING("Extracting...", "§e"),
     INITIALIZING("Initializing...", "§e"),
     INSTALLED("Installed", "§a"),
+    REINSTALLING("Reinstalling...", "§e"),
+    DELETING("Deleting...", "§c"),
+    DELETION_FAILED("Deletion Failed", "§c"),
+    DOWNLOAD_CANCELLED("Download Cancelled", "§7"),
+    DOWNLOAD_FAILED("Download Failed", "§c"),
+    COMPATIBILITY_ERROR("Compatibility Error", "§c"),
     ERROR("Error", "§c"),
     CANCELLING("Cancelling...", "§7");
 
@@ -31,9 +37,14 @@ public enum ModelInstallationState {
         return colorCode;
     }
 
+    public String getColoredLabel() {
+        return colorCode + displayLabel;
+    }
+
     public boolean isBusy() {
         return this == CHECKING || this == DOWNLOADING || this == VERIFYING 
-                || this == EXTRACTING || this == INITIALIZING || this == CANCELLING;
+                || this == EXTRACTING || this == INITIALIZING || this == CANCELLING
+                || this == REINSTALLING || this == DELETING;
     }
 
     public boolean isReady() {

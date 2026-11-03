@@ -64,5 +64,38 @@ public class VoiceConfigModelActionsTest {
         assertNotNull(small);
         assertTrue(small.getFormattedDownloadSize().contains("MB") || small.getFormattedDownloadSize().contains("GB"));
     }
+
+    @Test
+    public void testDiskSizeCalculation() throws IOException {
+        String modelId = VoiceConfigScreen.MODEL_APEX;
+        File modelDir = modelManager.getModelDir(modelId);
+        modelDir.mkdirs();
+        File dummyFile = new File(modelDir, "final.mdl");
+        try (FileOutputStream fos = new FileOutputStream(dummyFile)) {
+            fos.write(new byte[2048]);
+        }
+
+        assertTrue(modelManager.getModelDiskSizeBytes(modelId) >= 2048);
+        String formatted = modelManager.getFormattedDiskSize(modelId);
+        assertNotNull(formatted);
+        assertTrue(formatted.contains("MB") || formatted.contains("KB") || formatted.contains("GB"));
+    }
+
+    @Test
+    public void testDeleteModelWithStateUpdate() throws IOException {
+        String modelId = VoiceConfigScreen.MODEL_APEX;
+        File modelDir = modelManager.getModelDir(modelId);
+        modelDir.mkdirs();
+        File dummyFile = new File(modelDir, "final.mdl");
+        try (FileOutputStream fos = new FileOutputStream(dummyFile)) {
+            fos.write(new byte[1024]);
+        }
+        assertTrue(modelManager.isModelInstalled(modelId));
+
+        boolean deleted = modelManager.deleteModel(modelId);
+        assertTrue(deleted);
+        assertFalse(modelManager.isModelInstalled(modelId));
+        assertEquals(com.voice2text.model.ModelInstallationState.NOT_INSTALLED, modelManager.getModelInstallationState(modelId));
+    }
 }
 
