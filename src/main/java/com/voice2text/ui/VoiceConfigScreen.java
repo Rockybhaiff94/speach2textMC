@@ -213,7 +213,7 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal("Re-scans available operating system physical and virtual audio input devices.")))
          .bounds(centerX + 4, startY + (rowSpacing * 3), btnW, btnH).build());
 
-        // --- ROW 5: Reset Keybinds & Active Engine Toggle ---
+        // --- ROW 5: Reset Keybinds & Dual-Model Recognition Toggle ---
         addRenderableWidget(Button.builder(
                 Component.literal("§7Reset Keybinds"),
                 button -> {
@@ -228,42 +228,38 @@ public class VoiceConfigScreen extends Screen {
         ).tooltip(Tooltip.create(Component.literal("Restores default key mappings: T for chat activation, V for gameplay hold, P for stop & draft, O for settings.")))
          .bounds(centerX - btnW - 4, startY + (rowSpacing * 4), btnW, btnH).build());
 
-        String activeModelId = config.getActiveModelId();
-        SpeechModelInfo activeInfo = modelManager.getModelInfo(activeModelId);
-        String activeDisplayName = activeInfo != null ? activeInfo.getDisplayName() : activeModelId;
-        if (activeDisplayName.length() > 20) {
-            activeDisplayName = activeDisplayName.substring(0, 18) + "..";
-        }
+        boolean dualEnabled = config.isDualModelEnabled();
+        String dualLabel = "Dual-Model Mode: " + (dualEnabled ? "§aENABLED" : "§cDISABLED");
         addRenderableWidget(Button.builder(
-                Component.literal("Active: §a" + activeDisplayName),
+                Component.literal(dualLabel),
                 button -> {
-                    // Quick toggle between the two models if installed
-                    String next = MODEL_WHISPER_SMALL.equals(activeModelId) ? MODEL_APEX : MODEL_WHISPER_SMALL;
-                    if (modelManager.isModelInstalled(next)) {
-                        switchActiveModel(next);
-                    } else {
-                        downloadStatus = "§e" + (MODEL_WHISPER_SMALL.equals(next) ? "Whisper Small" : "Apex") + " is not installed yet. Click download below.";
-                        rebuildWidgets();
+                    config.setDualModelEnabled(!config.isDualModelEnabled());
+                    VoiceToTextMod mod = VoiceToTextMod.getInstance();
+                    if (mod != null) {
+                        mod.getConfigManager().save(config);
                     }
+                    rebuildWidgets();
                 }
-        ).tooltip(Tooltip.create(Component.literal("Active speech engine. Click to toggle between installed models.")))
+        ).tooltip(Tooltip.create(Component.literal("When enabled, Whisper Small (English) and Apex (Hindi) run concurrently in parallel on the same audio.")))
          .bounds(centerX + 4, startY + (rowSpacing * 4), btnW, btnH).build());
 
-        // --- ROW 6: AVAILABLE AI MODELS (Simple Direct Buttons) ---
+        // --- ROW 6: AVAILABLE AI MODELS (Simple Direct Buttons & Enable Toggles) ---
         int modelsY = startY + (rowSpacing * 5) + 14;
+        int actionBtnW = 125;
+        int toggleBtnW = 56;
 
         // Model 1: Whisper Small (English)
         boolean smallInstalled = modelManager.isModelInstalled(MODEL_WHISPER_SMALL);
         boolean smallIsDownloading = isDownloading && MODEL_WHISPER_SMALL.equals(downloadingModelId);
-        boolean smallActive = MODEL_WHISPER_SMALL.equals(activeModelId);
+        boolean smallEnabled = config.isWhisperSmallEnabled();
 
         String smallBtnLabel;
         if (smallIsDownloading) {
             smallBtnLabel = "§c✕ Cancel (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
         } else if (smallInstalled) {
-            smallBtnLabel = smallActive ? "⚙ Manage Small §a(Active)" : "⚙ View / Manage Small";
+            smallBtnLabel = "⚙ Manage Small";
         } else {
-            smallBtnLabel = "⬇ Download Whisper Small";
+            smallBtnLabel = "⬇ Download Small";
         }
 
         addRenderableWidget(Button.builder(
@@ -283,18 +279,31 @@ public class VoiceConfigScreen extends Screen {
                 smallIsDownloading ? "Click to cancel the ongoing download."
                 : (smallInstalled ? "Click to view details, reinstall, or permanently delete Whisper Small."
                 : "Download OpenAI Whisper Small model (~488 MB) for accurate English speech recognition."))))
-         .bounds(centerX - btnW - 4, modelsY, btnW, btnH).build());
+         .bounds(centerX - btnW - 4, modelsY, actionBtnW, btnH).build());
+
+        addRenderableWidget(Button.builder(
+                Component.literal("Eng: " + (smallEnabled ? "§aON" : "§cOFF")),
+                button -> {
+                    config.setWhisperSmallEnabled(!config.isWhisperSmallEnabled());
+                    VoiceToTextMod mod = VoiceToTextMod.getInstance();
+                    if (mod != null) {
+                        mod.getConfigManager().save(config);
+                    }
+                    rebuildWidgets();
+                }
+        ).tooltip(Tooltip.create(Component.literal("Enable or disable Whisper Small for English recognition.")))
+         .bounds(centerX - btnW - 4 + actionBtnW + 4, modelsY, toggleBtnW, btnH).build());
 
         // Model 2: Whisper Hindi2Hinglish Apex (Hindi / Hinglish)
         boolean apexInstalled = modelManager.isModelInstalled(MODEL_APEX);
         boolean apexIsDownloading = isDownloading && MODEL_APEX.equals(downloadingModelId);
-        boolean apexActive = MODEL_APEX.equals(activeModelId);
+        boolean apexEnabled = config.isApexEnabled();
 
         String apexBtnLabel;
         if (apexIsDownloading) {
             apexBtnLabel = "§c✕ Cancel (" + (downloadPercent >= 0 ? downloadPercent + "%" : "...") + ")";
         } else if (apexInstalled) {
-            apexBtnLabel = apexActive ? "⚙ Manage Apex §a(Active)" : "⚙ View / Manage Apex";
+            apexBtnLabel = "⚙ Manage Apex";
         } else {
             apexBtnLabel = "⬇ Download Apex";
         }
@@ -316,7 +325,20 @@ public class VoiceConfigScreen extends Screen {
                 apexIsDownloading ? "Click to cancel the ongoing download."
                 : (apexInstalled ? "Click to view details, reinstall, or permanently delete Whisper Hindi2Hinglish Apex."
                 : "Download Whisper Hindi2Hinglish Apex model (~574 MB) for natural Hindi speech & Roman transliteration."))))
-         .bounds(centerX + 4, modelsY, btnW, btnH).build());
+         .bounds(centerX + 4, modelsY, actionBtnW, btnH).build());
+
+        addRenderableWidget(Button.builder(
+                Component.literal("Hin: " + (apexEnabled ? "§aON" : "§cOFF")),
+                button -> {
+                    config.setApexEnabled(!config.isApexEnabled());
+                    VoiceToTextMod mod = VoiceToTextMod.getInstance();
+                    if (mod != null) {
+                        mod.getConfigManager().save(config);
+                    }
+                    rebuildWidgets();
+                }
+        ).tooltip(Tooltip.create(Component.literal("Enable or disable Apex for Hindi/Hinglish speech recognition.")))
+         .bounds(centerX + 4 + actionBtnW + 4, modelsY, toggleBtnW, btnH).build());
 
         // --- BOTTOM: Done Button ---
         addRenderableWidget(Button.builder(
@@ -504,18 +526,37 @@ public class VoiceConfigScreen extends Screen {
         // Model 1 (Left) subtitle / status
         boolean smallInstalled = modelManager.isModelInstalled(MODEL_WHISPER_SMALL);
         boolean smallIsDownloading = isDownloading && MODEL_WHISPER_SMALL.equals(downloadingModelId);
-        boolean smallActive = MODEL_WHISPER_SMALL.equals(activeModelId);
-        String smallStatus = smallInstalled ? ("Status: §aInstalled" + (smallActive ? " §8(Active)" : ""))
+        boolean smallEnabled = config.isWhisperSmallEnabled();
+        String smallStatus = smallInstalled
+                ? String.format("Installed: §aYes §7| Loaded: §aYes §7| %s", smallEnabled ? "§aActive" : "§7Standby")
                 : (smallIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "Status: §7Not Installed (~488 MB)");
         extractor.centeredText(this.font, smallStatus, centerX - (btnW / 2) - 4, modelsY + 22, 0xFFFFFFFF);
 
         // Model 2 (Right) subtitle / status
         boolean apexInstalled = modelManager.isModelInstalled(MODEL_APEX);
         boolean apexIsDownloading = isDownloading && MODEL_APEX.equals(downloadingModelId);
-        boolean apexActive = MODEL_APEX.equals(activeModelId);
-        String apexStatus = apexInstalled ? ("Status: §aInstalled" + (apexActive ? " §8(Active)" : ""))
+        boolean apexEnabled = config.isApexEnabled();
+        String apexStatus = apexInstalled
+                ? String.format("Installed: §aYes §7| Loaded: §aYes §7| %s", apexEnabled ? "§aActive" : "§7Standby")
                 : (apexIsDownloading ? String.format("§e⬇ Downloading %d%%", Math.max(0, downloadPercent)) : "Status: §7Not Installed (~574 MB)");
         extractor.centeredText(this.font, apexStatus, centerX + (btnW / 2) + 4, modelsY + 22, 0xFFFFFFFF);
+
+        // Dual-Model Parallel Status banner
+        boolean dualOn = config.isDualModelEnabled();
+        boolean smallOn = smallEnabled && smallInstalled;
+        boolean apexOn = apexEnabled && apexInstalled;
+
+        String dualStatusBanner;
+        if (dualOn && smallOn && apexOn) {
+            dualStatusBanner = "§a✔ Dual-Model Active: Whisper Small (English) + Apex (Hindi) running concurrently";
+        } else if (smallOn) {
+            dualStatusBanner = "§e⚠ Fallback Mode: Whisper Small Active (English Only)";
+        } else if (apexOn) {
+            dualStatusBanner = "§e⚠ Fallback Mode: Apex Active (Hindi & Hinglish Only)";
+        } else {
+            dualStatusBanner = "§c✖ No AI speech model active. Install a model to begin.";
+        }
+        extractor.centeredText(this.font, dualStatusBanner, centerX, modelsY + 36, 0xFFFFFFFF);
 
         // Display Keybind Conflicts or Duplicate Bindings
         VoiceToTextMod mod = VoiceToTextMod.getInstance();

@@ -123,5 +123,69 @@ public class DualModelAlignmentMergerTest {
         String result = DualModelAlignmentMerger.merge(hindiTranscript, englishTranscript);
         assertEquals("I, I, I want to remove this", result);
     }
+
+    // =========================================================================
+    // SECTION 6 MASTER TEST SENTENCES (A - F)
+    // =========================================================================
+
+    @Test
+    public void testMasterSentenceA_MeraNaamAshishHai() {
+        // Test A: "Mera naam Ashish hai."
+        String apex = "मेरा नाम आशीष है";
+        String whisper = "";
+
+        String result = DualModelAlignmentMerger.merge(apex, whisper);
+        assertEquals("Mera naam Ashish hai", result);
+    }
+
+    @Test
+    public void testMasterSentenceB_MeraNaamIsAshishAndIAmPlayingMinecraft() {
+        // Test B: "Mera naam is Ashish and I am playing Minecraft."
+        String apex = "mera naam is ashish end aai em playing minecraft";
+        String whisper = "Mera naam is Ashish and I am playing Minecraft";
+
+        String result = DualModelAlignmentMerger.merge(apex, whisper);
+        assertEquals("Mera naam is Ashish and I am playing Minecraft", result);
+    }
+
+    @Test
+    public void testMasterSentenceC_AajMainMinecraftKhelRahaHoonAndThisIsMyNewWorld() {
+        // Test C: "Aaj main Minecraft khel raha hoon and this is my new world."
+        String apex = "आज मैं माइनक्राफ्ट खेल रहा हूँ एंड दिस इस माय न्यू वर्ल्ड";
+        String whisper = "Aaj main Minecraft khel raha hoon and this is my new world";
+
+        String result = DualModelAlignmentMerger.merge(apex, whisper);
+        assertEquals("Aaj main Minecraft khel raha hoon and this is my new world", result);
+    }
+
+    @Test
+    public void testMasterSentenceD_SoYeEkVoiceToTextModelKaReviewHaiAurBugFixingKeLiyeRecordingHoRahiHai() {
+        // Test D: "So ye ek voice to text model ka review hai aur bug fixing ke liye recording ho rahi hai."
+        String apex = "सो ये एक वॉइस टू टेक्स्ट मॉडल का रिव्यू है और बग फिक्सिंग के लिए रिकॉर्डिंग हो रही है";
+        String whisper = "So ye ek voice to text model ka review hai aur bug fixing ke liye recording ho rahi hai";
+
+        String result = DualModelAlignmentMerger.merge(apex, whisper);
+        assertEquals("So ye ek voice to text model ka review hai aur bug fixing ke liye recording ho rahi hai", result);
+    }
+
+    @Test
+    public void testMasterSentenceE_KalIWillTestTheNewModelBecauseMujheIskaPerformanceCheckKarnaHai() {
+        // Test E: "Kal I will test the new model because mujhe iska performance check karna hai."
+        String apex = "कल आई विल टेस्ट द न्यू मॉडल बिकॉज़ मुझे इसका परफॉर्मेंस चेक करना है";
+        String whisper = "Kal I will test the new model because mujhe iska performance check karna hai";
+
+        String result = DualModelAlignmentMerger.merge(apex, whisper);
+        assertEquals("Kal I will test the new model because mujhe iska performance check karna hai", result);
+    }
+
+    @Test
+    public void testMasterSentenceF_YeEkProperFlatWorldHaiJahanPeMainAbhiMinecraftKhelRahaHoon() {
+        // Test F: "Ye ek proper flat world hai jahan pe main abhi Minecraft khel raha hoon."
+        String apex = "ये एक प्रॉपर फ्लैट वर्ल्ड है जहाँ पे मैं अभी माइनक्राफ्ट खेल रहा हूँ";
+        String whisper = "Ye ek proper flat world hai jahan pe main abhi Minecraft khel raha hoon";
+
+        String result = DualModelAlignmentMerger.merge(apex, whisper);
+        assertEquals("Ye ek proper flat world hai jahan pe main abhi Minecraft khel raha hoon", result);
+    }
 }
 

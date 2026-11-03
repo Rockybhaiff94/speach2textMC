@@ -51,7 +51,8 @@ public class DualModelAlignmentMerger {
             "yahan", "wahan", "idhar", "udhar", "ab", "tab", "jab", "sab", "kuch", "bahut", "thoda",
             "samaan", "cheez", "ghar", "bhai", "yaar", "dost", "ek", "do", "teen", "chaar", "paanch",
             "chalu", "nahi", "na", "mat", "khol", "kholo", "chahiye", "rakh", "rakho", "le", "lo", "de", "do",
-            "hatwana", "hatana", "hatao", "nikalo", "rakhna", "khelenge", "banaye", "banayein"
+            "hatwana", "hatana", "hatao", "nikalo", "rakhna", "khelenge", "banaye", "banayein",
+            "kal", "aaj", "abhi", "pe", "jahan", "iska", "iske", "iski", "liye", "ke", "se", "ye", "yeh", "woh", "voh", "main", "mai", "ka"
     ));
 
     /**
@@ -113,6 +114,36 @@ public class DualModelAlignmentMerger {
         PHONETIC_ENGLISH_MAP.put("sarver", "server");
         PHONETIC_ENGLISH_MAP.put("dimond", "diamond");
         PHONETIC_ENGLISH_MAP.put("bild", "build");
+
+        // Common tech, gameplay & conversational English words
+        PHONETIC_ENGLISH_MAP.put("dhis", "this");
+        PHONETIC_ENGLISH_MAP.put("dis", "this");
+        PHONETIC_ENGLISH_MAP.put("maai", "my");
+        PHONETIC_ENGLISH_MAP.put("may", "my");
+        PHONETIC_ENGLISH_MAP.put("nyu", "new");
+        PHONETIC_ENGLISH_MAP.put("varld", "world");
+        PHONETIC_ENGLISH_MAP.put("vorld", "world");
+        PHONETIC_ENGLISH_MAP.put("rivyu", "review");
+        PHONETIC_ENGLISH_MAP.put("reevyu", "review");
+        PHONETIC_ENGLISH_MAP.put("bag", "bug");
+        PHONETIC_ENGLISH_MAP.put("fiksing", "fixing");
+        PHONETIC_ENGLISH_MAP.put("phiksing", "fixing");
+        PHONETIC_ENGLISH_MAP.put("rekording", "recording");
+        PHONETIC_ENGLISH_MAP.put("rikording", "recording");
+        PHONETIC_ENGLISH_MAP.put("maadal", "model");
+        PHONETIC_ENGLISH_MAP.put("modal", "model");
+        PHONETIC_ENGLISH_MAP.put("parformens", "performance");
+        PHONETIC_ENGLISH_MAP.put("parfaarmens", "performance");
+        PHONETIC_ENGLISH_MAP.put("chek", "check");
+        PHONETIC_ENGLISH_MAP.put("praapar", "proper");
+        PHONETIC_ENGLISH_MAP.put("propar", "proper");
+        PHONETIC_ENGLISH_MAP.put("flet", "flat");
+        PHONETIC_ENGLISH_MAP.put("flaet", "flat");
+        PHONETIC_ENGLISH_MAP.put("bikaaz", "because");
+        PHONETIC_ENGLISH_MAP.put("bikoz", "because");
+        PHONETIC_ENGLISH_MAP.put("bikaus", "because");
+        PHONETIC_ENGLISH_MAP.put("vil", "will");
+        PHONETIC_ENGLISH_MAP.put("tekst", "text");
     }
 
     /**
@@ -292,6 +323,24 @@ public class DualModelAlignmentMerger {
 
         // Ensure leading/trailing English clauses are integrated if missed by phonetic alignment
         List<String> finalTokens = reconcileMissingEnglishClauses(mergedTokens, englishTokens, originalEnglish);
+
+        // Track selected Hindi vs English words for diagnostic logging
+        List<String> selectedHindi = new ArrayList<>();
+        List<String> selectedEnglish = new ArrayList<>();
+        for (String tok : finalTokens) {
+            String lower = tok.toLowerCase(Locale.ROOT);
+            if (HINDI_STRUCTURAL_MARKERS.contains(lower)) {
+                selectedHindi.add(tok);
+            } else if (tok.matches("^[a-zA-Z0-9']+$")) {
+                selectedEnglish.add(tok);
+            }
+        }
+        if (!selectedHindi.isEmpty()) {
+            System.out.println("[Voice2Text-Diagnostic] [MERGER] Selected Hindi: \"" + String.join(" ", selectedHindi) + "\"");
+        }
+        if (!selectedEnglish.isEmpty()) {
+            System.out.println("[Voice2Text-Diagnostic] [MERGER] Selected English: \"" + String.join(" ", selectedEnglish) + "\"");
+        }
 
         return formatPunctuationAndSpacing(String.join(" ", finalTokens));
     }

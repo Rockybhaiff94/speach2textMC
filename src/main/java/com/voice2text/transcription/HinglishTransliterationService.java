@@ -168,6 +168,28 @@ public class HinglishTransliterationService {
         LOANWORDS_MAP.put("डाउनलोड", "download");
         LOANWORDS_MAP.put("अपडेट", "update");
         LOANWORDS_MAP.put("लेवल", "level");
+        LOANWORDS_MAP.put("रिव्यू", "review");
+        LOANWORDS_MAP.put("रिव्यु", "review");
+        LOANWORDS_MAP.put("बग", "bug");
+        LOANWORDS_MAP.put("फिक्सिंग", "fixing");
+        LOANWORDS_MAP.put("फ़िक्सिंग", "fixing");
+        LOANWORDS_MAP.put("रिकॉर्डिंग", "recording");
+        LOANWORDS_MAP.put("रेकॉर्डिंग", "recording");
+        LOANWORDS_MAP.put("मॉडल", "model");
+        LOANWORDS_MAP.put("माडल", "model");
+        LOANWORDS_MAP.put("टेक्स्ट", "text");
+        LOANWORDS_MAP.put("टेक्सट", "text");
+        LOANWORDS_MAP.put("परफॉर्मेंस", "performance");
+        LOANWORDS_MAP.put("परफॉरमेंस", "performance");
+        LOANWORDS_MAP.put("चेक", "check");
+        LOANWORDS_MAP.put("टेस्ट", "test");
+        LOANWORDS_MAP.put("प्रॉपर", "proper");
+        LOANWORDS_MAP.put("प्रापर", "proper");
+        LOANWORDS_MAP.put("फ्लैट", "flat");
+        LOANWORDS_MAP.put("फ़्लैट", "flat");
+        LOANWORDS_MAP.put("बिकॉज़", "because");
+        LOANWORDS_MAP.put("बिकॉज", "because");
+        LOANWORDS_MAP.put("बिकोज़", "because");
 
         // --- Conversational English Words (Preserved accurately in Hinglish) ---
         LOANWORDS_MAP.put("आई", "I");
@@ -188,6 +210,7 @@ public class HinglishTransliterationService {
         LOANWORDS_MAP.put("योअर", "your");
         LOANWORDS_MAP.put("माई", "my");
         LOANWORDS_MAP.put("माइ", "my");
+        LOANWORDS_MAP.put("माय", "my");
         LOANWORDS_MAP.put("मी", "me");
         LOANWORDS_MAP.put("ही", "he");
         LOANWORDS_MAP.put("शी", "she");
@@ -468,6 +491,13 @@ public class HinglishTransliterationService {
         COMMON_HINDI_MAP.put("इधर", "idhar");
         COMMON_HINDI_MAP.put("उधर", "udhar");
         COMMON_HINDI_MAP.put("किधर", "kidhar");
+        COMMON_HINDI_MAP.put("अभी", "abhi");
+        COMMON_HINDI_MAP.put("पे", "pe");
+        COMMON_HINDI_MAP.put("इसका", "iska");
+        COMMON_HINDI_MAP.put("इसके", "iske");
+        COMMON_HINDI_MAP.put("इसकी", "iski");
+        COMMON_HINDI_MAP.put("लिए", "liye");
+        COMMON_HINDI_MAP.put("लिये", "liye");
     }
 
     /**

@@ -46,6 +46,11 @@ public class VoiceToTextConfig {
     private String interfaceLayout = "LAYOUT_2";
     private String outputScript = "ROMAN_HINDI";
 
+    // True Parallel Dual-Model Speech Recognition Settings
+    private boolean dualModelEnabled = true;
+    private boolean whisperSmallEnabled = true;
+    private boolean apexEnabled = true;
+
     public VoiceToTextConfig() {
     }
 
@@ -155,6 +160,30 @@ public class VoiceToTextConfig {
 
     public void setOutputScript(String outputScript) {
         this.outputScript = outputScript != null ? outputScript : "ROMAN_HINDI";
+    }
+
+    public boolean isDualModelEnabled() {
+        return dualModelEnabled;
+    }
+
+    public void setDualModelEnabled(boolean dualModelEnabled) {
+        this.dualModelEnabled = dualModelEnabled;
+    }
+
+    public boolean isWhisperSmallEnabled() {
+        return whisperSmallEnabled;
+    }
+
+    public void setWhisperSmallEnabled(boolean whisperSmallEnabled) {
+        this.whisperSmallEnabled = whisperSmallEnabled;
+    }
+
+    public boolean isApexEnabled() {
+        return apexEnabled;
+    }
+
+    public void setApexEnabled(boolean apexEnabled) {
+        this.apexEnabled = apexEnabled;
     }
 
     public String getRecordingMode() {

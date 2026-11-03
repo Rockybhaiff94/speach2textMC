@@ -112,7 +112,9 @@ public class AudioCaptureService {
                     }
 
                     // Enqueue chunk for recognition with bounded backpressure handling
-                    if (speechEngine != null && speechEngine.isRunning()) {
+                    boolean primaryRunning = (speechEngine != null && speechEngine.isRunning());
+                    boolean secondaryRunning = (secondaryEngine != null && secondaryEngine.isRunning());
+                    if (primaryRunning || secondaryRunning) {
                         byte[] chunk = Arrays.copyOf(buffer, bytesRead);
                         if (!audioQueue.offer(chunk)) {
                             // Backpressure: queue is full, drop oldest frame to maintain low latency

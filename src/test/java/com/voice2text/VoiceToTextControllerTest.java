@@ -356,6 +356,29 @@ public class VoiceToTextControllerTest {
         assertEquals("Bhai game mein aa jao", mockChat.sentMessages.get(0));
     }
 
+    @Test
+    public void testParallelDualModelMergingInController() throws Exception {
+        File modelsDir = modelManager.getModelsBaseDir();
+        File apexDir = new File(modelsDir, "whisper-hindi2hinglish-apex/conf");
+        apexDir.mkdirs();
+        new File(apexDir, "model.conf").createNewFile();
+
+        configManager.getConfig().setAutomaticSend(true);
+        configManager.getConfig().setDualModelEnabled(true);
+        configManager.getConfig().setActiveModelId("whisper-hindi2hinglish-apex");
+
+        controller.handleKeyAction(KeyAction.START_DICTATION);
+        assertTrue(controller.isDictationActive());
+
+        // Simulate Apex output (Devanagari Hindi)
+        mockEngine.simulateFinal("मेरा नाम आशीष है");
+
+        controller.handleKeyAction(KeyAction.STOP_AND_SEND);
+
+        assertEquals(1, mockChat.sentMessages.size());
+        assertEquals("Mera naam Ashish hai", mockChat.sentMessages.get(0));
+    }
+
     // Mock AudioSource
     private static class MockAudioSource implements AudioSource {
         private boolean open = false;
